@@ -53,11 +53,18 @@ EOF
     chmod +x /home/gitpod/Desktop/MEGA.desktop
 }
 
-# Run MEGA configuration and mounting
+# Function to sync local folder with MEGA folder
+sync_mega() {
+    echo "Syncing local folder with MEGA..."
+    mega-sync /workspace/mega /GitPod-Workspace
+}
+
+# Run MEGA configuration, mounting, and syncing
 configure_mega
 mount_mega
+sync_mega
 
 # Create the desktop shortcut
 create_desktop_shortcut
 
-echo "MEGA has been mounted, and the desktop shortcut is ready to use."
+echo "MEGA has been mounted and synced. The desktop shortcut is ready to use."

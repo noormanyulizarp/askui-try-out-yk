@@ -4,9 +4,10 @@
 configure_mega() {
     if ! mega-whoami; then
         echo "Configuring MEGA..."
-        read -p "Enter your MEGA email: " mega_email
-        read -s -p "Enter your MEGA password: " mega_password
-        mega-login $mega_email $mega_password
+        # Use environment variables for MEGA credentials
+        mega_email="${MEGA_EMAIL}"
+        mega_password="${MEGA_PASSWORD}"
+        mega-login "$mega_email" "$mega_password"
     fi
 }
 

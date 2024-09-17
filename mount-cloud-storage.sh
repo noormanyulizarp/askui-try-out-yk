@@ -3,11 +3,12 @@
 # Function to configure MEGA
 configure_mega() {
     if ! mega-whoami; then
+        if [ -z "$MEGA_EMAIL" ] || [ -z "$MEGA_PASSWORD" ]; then
+            echo "MEGA credentials not set. Please set MEGA_EMAIL and MEGA_PASSWORD."
+            exit 1
+        fi
         echo "Configuring MEGA..."
-        # Use environment variables for MEGA credentials
-        mega_email="${MEGA_EMAIL}"
-        mega_password="${MEGA_PASSWORD}"
-        mega-login "$mega_email" "$mega_password"
+        mega-login "$MEGA_EMAIL" "$MEGA_PASSWORD"
     else
         echo "Already logged into MEGA."
     fi
@@ -18,7 +19,12 @@ mount_mega() {
     if ! mountpoint -q /workspace/mega; then
         echo "Mounting MEGA..."
         mkdir -p /workspace/mega
-        mega-mount /workspace/mega
+        if mega-mount /workspace/mega; then
+            echo "MEGA mounted successfully."
+        else
+            echo "Failed to mount MEGA."
+            exit 1
+        fi
     else
         echo "MEGA is already mounted."
     fi
@@ -27,6 +33,9 @@ mount_mega() {
 # Function to create a desktop shortcut for MEGA
 create_desktop_shortcut() {
     echo "Creating desktop shortcut for MEGA..."
+    
+    # Ensure the Desktop directory exists
+    mkdir -p /home/gitpod/Desktop
 
     # Create .desktop file
     cat <<EOF > /home/gitpod/Desktop/MEGA.desktop

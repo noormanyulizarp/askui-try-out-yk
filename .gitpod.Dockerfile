@@ -28,3 +28,6 @@ RUN wget https://mega.nz/linux/repo/xUbuntu_22.10/amd64/megacmd-xUbuntu_22.10_am
 
 # Ensure /usr/local/bin is in PATH
 ENV PATH="/usr/local/bin:${PATH}"
+
+# Start MEGA CMD server on container startup
+ENTRYPOINT ["megacmd-server"]

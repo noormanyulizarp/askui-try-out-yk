@@ -3,20 +3,15 @@ image:
 
 tasks:
   - init: |
-      npm install -g npm@10.2.3
-      nvm install --lts
-      nvm use --lts
-      npm install
-      sed -i "s/<your workspace id>/$workspaceid/g" test/helper/jest.setup.ts
-      sed -i "s/<your access token>/$accesstoken/g" test/helper/jest.setup.ts
-    command: |
       chmod +x install-mega.sh
-      ./install-mega.sh
       chmod +x mount-cloud-storage.sh
-      ./mount-cloud-storage.sh
+    command: |
+      ./install-mega.sh
       # Start MEGA CMD server
       megacmd-server &
-       
+      # Mount MEGA storage
+      ./mount-cloud-storage.sh
+
 ports:
   - port: 6080
     onOpen: open-preview

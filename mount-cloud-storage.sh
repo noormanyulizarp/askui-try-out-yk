@@ -19,8 +19,31 @@ mount_mega() {
     fi
 }
 
+# Function to create a desktop shortcut for MEGA
+create_desktop_shortcut() {
+    echo "Creating desktop shortcut for MEGA..."
+
+    # Create .desktop file
+    cat <<EOF > /home/gitpod/Desktop/MEGA.desktop
+[Desktop Entry]
+Name=MEGA
+Comment=Access your MEGA cloud storage
+Exec=nautilus /workspace/mega
+Icon=folder
+Terminal=false
+Type=Application
+Categories=Utility;
+EOF
+
+    # Make it executable
+    chmod +x /home/gitpod/Desktop/MEGA.desktop
+}
+
 # Run MEGA configuration and mounting
 configure_mega
 mount_mega
 
-echo "MEGA has been mounted and is ready to use."
+# Create the desktop shortcut
+create_desktop_shortcut
+
+echo "MEGA has been mounted, and the desktop shortcut is ready to use."

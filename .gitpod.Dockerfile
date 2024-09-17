@@ -19,13 +19,7 @@ RUN sudo apt-get update \
    libzen0v5 \
  && sudo rm -rf /var/lib/apt/lists/*
 
-# Install pCloud console client
-RUN wget https://github.com/pcloud/console-client/releases/download/v1.7.1/pcloud_linux_amd64 -O /tmp/pcloud \
- && sudo mv /tmp/pcloud /usr/local/bin/pcloud \
- && sudo chmod +x /usr/local/bin/pcloud \
- && /usr/local/bin/pcloud --version
-
-# Install MEGA CMD
+# Install MEGA CMD (latest version)
 RUN wget https://mega.nz/linux/repo/xUbuntu_22.10/amd64/megacmd-xUbuntu_22.10_amd64.deb -O /tmp/megacmd.deb \
  && sudo dpkg -i /tmp/megacmd.deb \
  && sudo apt-get -f install -y \

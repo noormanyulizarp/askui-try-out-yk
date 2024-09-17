@@ -16,3 +16,13 @@ RUN sudo apt-get update \
    geany\
  && sudo rm -rf /var/lib/apt/lists/*
  
+ # Install pCloud console client
+RUN wget https://github.com/pcloud/console-client/releases/download/v1.7.1/pcloud_linux_amd64 -O /tmp/pcloud \
+&& sudo mv /tmp/pcloud /usr/local/bin/pcloud \
+&& sudo chmod +x /usr/local/bin/pcloud
+
+# Install MEGA CMD
+RUN wget https://mega.nz/linux/repo/xUbuntu_20.04/amd64/megacmd-xUbuntu_20.04_amd64.deb -O /tmp/megacmd.deb \
+&& sudo dpkg -i /tmp/megacmd.deb \
+&& sudo apt-get -f install -y \
+&& rm /tmp/megacmd.deb

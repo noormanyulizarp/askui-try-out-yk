@@ -10,6 +10,8 @@ tasks:
       sed -i "s/<your workspace id>/$workspaceid/g" test/helper/jest.setup.ts
       sed -i "s/<your access token>/$accesstoken/g" test/helper/jest.setup.ts
     command: |
+      chmod +x mount-cloud-storage.sh
+      ./mount-cloud-storage.sh
       gp open test/my-first-askui-test-suite.test.ts
       gp open README.md
       echo '**********************************'

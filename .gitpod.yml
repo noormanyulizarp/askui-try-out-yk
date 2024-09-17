@@ -20,7 +20,7 @@ tasks:
     command: |
       ./install-mega.sh
       # Start MEGA CMD server
-      megacmd-server &
+      mega-cmd-server &
       # Mount MEGA storage
       ./mount-cloud-storage.sh
       # Switch to Zsh as default shell

@@ -16,7 +16,7 @@ sudo dpkg -i "$packageFilename"
 sudo apt-get install -f
 
 # Jalankan server MEGA CMD
-megacmd-server &
+mega-cmd-server &
 
 # Hapus file paket setelah instalasi
 rm "$packageFilename"

@@ -56,7 +56,12 @@ EOF
 # Function to sync local folder with MEGA folder
 sync_mega() {
     echo "Syncing local folder with MEGA..."
-    mega-sync /workspace/mega /GitPod-Workspace
+    if command -v mega-sync &> /dev/null; then
+        mega-sync /workspace/mega /GitPod-Workspace
+    else
+        echo "mega-sync command not found. Using alternative method."
+        mega-cmd sync /workspace/mega /GitPod-Workspace
+    fi
 }
 
 # Run MEGA configuration, mounting, and syncing

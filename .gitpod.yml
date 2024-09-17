@@ -12,14 +12,7 @@ tasks:
     command: |
       chmod +x mount-cloud-storage.sh
       ./mount-cloud-storage.sh
-      gp open test/my-first-askui-test-suite.test.ts
-      gp open README.md
-      echo '**********************************'
-      echo '** Start first askui automation **'
-      echo '**********************************'
-      npm run askui-automation
-  
-      
+       
 ports:
   - port: 6080
     onOpen: open-preview

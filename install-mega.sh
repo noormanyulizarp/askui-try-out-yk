@@ -15,5 +15,8 @@ sudo dpkg -i "$packageFilename"
 # Perbaiki dependensi jika ada yang hilang
 sudo apt-get install -f
 
+# Jalankan server MEGA CMD
+megacmd-server &
+
 # Hapus file paket setelah instalasi
 rm "$packageFilename"

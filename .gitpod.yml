@@ -14,6 +14,8 @@ tasks:
       ./install-mega.sh
       chmod +x mount-cloud-storage.sh
       ./mount-cloud-storage.sh
+      # Start MEGA CMD server
+      megacmd-server &
        
 ports:
   - port: 6080

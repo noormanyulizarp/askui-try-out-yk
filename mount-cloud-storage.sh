@@ -8,6 +8,8 @@ configure_mega() {
         mega_email="${MEGA_EMAIL}"
         mega_password="${MEGA_PASSWORD}"
         mega-login "$mega_email" "$mega_password"
+    else
+        echo "Already logged into MEGA."
     fi
 }
 
@@ -17,6 +19,8 @@ mount_mega() {
         echo "Mounting MEGA..."
         mkdir -p /workspace/mega
         mega-mount /workspace/mega
+    else
+        echo "MEGA is already mounted."
     fi
 }
 

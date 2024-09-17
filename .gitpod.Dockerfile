@@ -17,6 +17,8 @@ RUN sudo apt-get update \
    libc-ares2 \
    libmediainfo0v5 \
    libzen0v5 \
+   nautilus \
+   dbus-x11 \
  && sudo rm -rf /var/lib/apt/lists/*
 
 # Install MEGA CMD (latest version)

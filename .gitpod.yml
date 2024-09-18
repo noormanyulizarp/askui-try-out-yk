@@ -20,7 +20,10 @@ tasks:
       wait_for_mega_cmd
       
       # You can add any additional startup commands here
-      
+
+      # Mount MEGA storage
+      ./mount-cloud-storage.sh
+
       # Switch to Zsh as the default shell
       exec zsh
 

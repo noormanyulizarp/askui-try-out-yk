@@ -1,0 +1,20 @@
+{
+    "name": "Codespace Development Environment",
+    "build": {
+        "dockerfile": "../codespace/Dockerfile",
+        "context": "../codespace"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-azuretools.vscode-docker",
+                "ms-vscode.vscode-typescript-tslint-plugin",
+                "dbaeumer.vscode-eslint",
+                "esbenp.prettier-vscode"
+            ]
+        }
+    },
+    "remoteUser": "vscode",
+    "postCreateCommand": "/home/vscode/setup-mega.sh",
+    "postStartCommand": "/home/vscode/start-mega.sh"
+}

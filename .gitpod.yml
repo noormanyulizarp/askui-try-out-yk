@@ -3,9 +3,21 @@ image:
 
 tasks:
   - command: |
+      # Function to wait for MEGA CMD server to be ready
+      wait_for_mega_cmd() {
+          echo "Waiting for MEGA CMD server to be ready..."
+          while ! mega-whoami &> /dev/null; do
+              sleep 1
+              echo "Still waiting for MEGA CMD server..."
+          done
+          echo "MEGA CMD server is ready."
+      }
+
       # Start MEGA CMD server
       mega-cmd-server &
-      sleep 5  # Wait for server to start
+      
+      # Wait for the server to be ready before proceeding
+      wait_for_mega_cmd
       
       # You can add any additional startup commands here
       
@@ -15,3 +27,7 @@ tasks:
 ports:
   - port: 6080
     onOpen: open-preview
+
+# Optional: Parallel execution of startup tasks (e.g., sync, cloud setup)
+# You can use '&' to run additional commands in the background for better performance
+# For example, starting background sync processes or other setup tasks.

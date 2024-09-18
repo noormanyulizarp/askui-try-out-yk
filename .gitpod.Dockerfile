@@ -28,8 +28,25 @@ RUN wget https://mega.nz/linux/repo/xUbuntu_22.10/amd64/megacmd-xUbuntu_22.10_am
  && rm /tmp/megacmd.deb \
  && mega-cmd --version
 
+# Install dependencies for Zsh setup
+RUN sudo apt-get update \
+ && sudo DEBIAN_FRONTEND=noninteractive apt-get install -yq \
+   wget \
+   git \
+   zsh \
+ && sudo rm -rf /var/lib/apt/lists/*
+
 # Ensure /usr/local/bin is in PATH
 ENV PATH="/usr/local/bin:${PATH}"
+
+# Copy Zsh setup script and configuration files
+COPY --chown=gitpod:gitpod ./zsh_setup.sh /home/gitpod/zsh_setup.sh
+COPY --chown=gitpod:gitpod ./config/.zshrc /home/gitpod/.zshrc
+COPY --chown=gitpod:gitpod ./config/.p10k.zsh /home/gitpod/.p10k.zsh
+COPY --chown=gitpod:gitpod ./config/aliases.zsh /home/gitpod/.oh-my-zsh/custom/
+
+# Install Oh My Zsh and configure it
+RUN /home/gitpod/zsh_setup.sh
 
 # Start MEGA CMD server on container startup
 ENTRYPOINT ["mega-cmd-server"]

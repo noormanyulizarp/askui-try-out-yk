@@ -2,29 +2,15 @@ image:
   file: .gitpod.Dockerfile
 
 tasks:
-  - init: |
-      # Make scripts executable
-      chmod +x install-mega.sh
-      chmod +x mount-cloud-storage.sh
-      chmod +x zsh_setup.sh  # Ensure Zsh setup script is executable
-
-      # Run Zsh setup script
-      ./zsh_setup.sh
-    
-      # Run MEGA installation script
-      ./install-mega.sh
-      
+  - command: |
       # Start MEGA CMD server
       mega-cmd-server &
-      sleep 10  # Wait for server to start
-
-      # Mount MEGA storage
-      ./mount-cloud-storage.sh
-      sleep 10  # Wait for mounting to complete
+      sleep 5  # Wait for server to start
       
-  - command: |
+      # You can add any additional startup commands here
+      
       # Switch to Zsh as the default shell
-      zsh
+      exec zsh
 
 ports:
   - port: 6080

@@ -3,27 +3,27 @@ image:
 
 tasks:
   - init: |
+      # Make scripts executable
       chmod +x install-mega.sh
       chmod +x mount-cloud-storage.sh
-      # Install Oh My Zsh and set Zsh as default shell
-      sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-      # Enable useful Zsh plugins
-      git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
-      git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
-      # Modify .zshrc to activate the plugins and change the theme
-      sed -i 's/plugins=(git)/plugins=(git zsh-syntax-highlighting zsh-autosuggestions)/' ~/.zshrc
-      sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/' ~/.zshrc
-      # Add git alias 'gst'
-      echo "alias gst='git status'" >> ~/.zshrc
-      # Reload .zshrc to apply changes
-      source ~/.zshrc
-    command: |
+      chmod +x zsh_setup.sh  # Ensure Zsh setup script is executable
+
+      # Run Zsh setup script
+      ./zsh_setup.sh
+    
+      # Run MEGA installation script
       ./install-mega.sh
+      
       # Start MEGA CMD server
       mega-cmd-server &
+      sleep 10  # Wait for server to start
+
       # Mount MEGA storage
       ./mount-cloud-storage.sh
-      # Switch to Zsh as default shell
+      sleep 10  # Wait for mounting to complete
+      
+  - command: |
+      # Switch to Zsh as the default shell
       zsh
 
 ports:

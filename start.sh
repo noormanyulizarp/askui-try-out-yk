@@ -6,7 +6,7 @@ start_mega_cmd_server() {
     mega-cmd-server &
     
     # Wait for the server to be ready with a health check
-    for i in {1..10}; do
+    for i in {1..50}; do
         if mega-whoami &> /dev/null; then
             echo "MEGA CMD server started successfully."
             return 0
@@ -16,7 +16,7 @@ start_mega_cmd_server() {
         fi
     done
     
-    # If the server doesn't start after 10 attempts, log an error and exit
+    # If the server doesn't start after 50 attempts, log an error and exit
     echo "Error: MEGA CMD server failed to start after multiple attempts."
     exit 1
 }

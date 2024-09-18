@@ -8,7 +8,7 @@ log_message() {
 # Retry mechanism with max attempts
 retry() {
     local -r command=$1
-    local -r max_attempts=$2
+    local -r max_attempts=$10
     local -r sleep_time=$3
     local attempt=1
 
@@ -32,7 +32,11 @@ configure_mega() {
             exit 1
         fi
         log_message "Configuring MEGA..."
-        retry "mega-login \"$MEGA_EMAIL\" \"$MEGA_PASSWORD\"" 5 2 || exit 1
+        if ! mega-login "$MEGA_EMAIL" "$MEGA_PASSWORD"; then
+            log_message "Error: Failed to login to MEGA."
+            exit 1
+        fi
+        log_message "Logged into MEGA successfully."
     else
         log_message "Already logged into MEGA."
     fi

@@ -1,10 +1,10 @@
 FROM gitpod/workspace-full-vnc:latest
 
-USER gitpod
+USER root
 
 # Install necessary packages and dependencies
-RUN sudo apt-get update \
- && sudo DEBIAN_FRONTEND=noninteractive apt-get install -yq \
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -yq \
    libfuse2 \
    fuse \
    libatk-bridge2.0-0 \
@@ -19,34 +19,51 @@ RUN sudo apt-get update \
    libzen0v5 \
    nautilus \
    dbus-x11 \
- && sudo rm -rf /var/lib/apt/lists/*
-
-# Install MEGA CMD (latest version)
-RUN wget https://mega.nz/linux/repo/xUbuntu_22.10/amd64/megacmd-xUbuntu_22.10_amd64.deb -O /tmp/megacmd.deb \
- && sudo dpkg -i /tmp/megacmd.deb \
- && sudo apt-get -f install -y \
- && rm /tmp/megacmd.deb \
- && mega-cmd --version
-
-# Install dependencies for Zsh setup
-RUN sudo apt-get update \
- && sudo DEBIAN_FRONTEND=noninteractive apt-get install -yq \
    wget \
    git \
    zsh \
- && sudo rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/*
+
+# Install MEGA CMD (latest version)
+RUN wget https://mega.nz/linux/repo/xUbuntu_22.10/amd64/megacmd-xUbuntu_22.10_amd64.deb -O /tmp/megacmd.deb \
+ && dpkg -i /tmp/megacmd.deb \
+ && apt-get -f install -y \
+ && rm /tmp/megacmd.deb \
+ && mega-cmd --version
 
 # Ensure /usr/local/bin is in PATH
 ENV PATH="/usr/local/bin:${PATH}"
 
-# Copy Zsh setup script and configuration files
-COPY --chown=gitpod:gitpod ./zsh_setup.sh /home/gitpod/zsh_setup.sh
-COPY --chown=gitpod:gitpod ./config/.zshrc /home/gitpod/.zshrc
-COPY --chown=gitpod:gitpod ./config/.p10k.zsh /home/gitpod/.p10k.zsh
-COPY --chown=gitpod:gitpod ./config/aliases.zsh /home/gitpod/.oh-my-zsh/custom/
+# Switch to gitpod user for Oh My Zsh installation
+USER gitpod
 
-# Install Oh My Zsh and configure it
-RUN /home/gitpod/zsh_setup.sh
+# Install Oh My Zsh
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
-# Start MEGA CMD server on container startup
-ENTRYPOINT ["mega-cmd-server"]
+# Install Zsh plugins
+RUN git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting \
+ && git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+
+# Configure Zsh
+RUN sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/' ~/.zshrc \
+ && sed -i 's/plugins=(git)/plugins=(git zsh-syntax-highlighting zsh-autosuggestions)/' ~/.zshrc \
+ && echo 'alias gst="git status"' >> ~/.zshrc
+
+# Create .p10k.zsh
+RUN echo 'POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(user dir vcs)' > ~/.p10k.zsh \
+ && echo 'POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status root_indicator background_jobs)' >> ~/.p10k.zsh
+
+# Switch back to root for final steps
+USER root
+
+# Add start.sh
+COPY start.sh /home/gitpod/start.sh
+RUN chmod +x /home/gitpod/start.sh
+
+# Ensure MEGA CMD can run as gitpod user
+RUN chown -R gitpod:gitpod /home/gitpod/.megaCmd
+
+# Switch back to gitpod user
+USER gitpod
+
+ENTRYPOINT ["/home/gitpod/start.sh"]

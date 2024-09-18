@@ -20,7 +20,7 @@ tasks:
       wait_for_mega_cmd
       
       # Mount MEGA storage
-      ./mount-cloud-storage.sh &
+      mount-cloud-storage.sh &
       
       # Switch to Zsh as the default shell
       exec zsh

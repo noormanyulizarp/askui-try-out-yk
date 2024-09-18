@@ -45,6 +45,9 @@ RUN wget https://mega.nz/linux/repo/xUbuntu_22.10/amd64/megacmd-xUbuntu_22.10_am
  && sudo apt-get -f install -y \
  && rm /tmp/megacmd.deb
 
-# Set MEGA CMD server to start and Zsh to be the default shell
-ENTRYPOINT ["mega-cmd-server"]
-CMD ["/bin/zsh", "-l"]
+# Copy the startup script
+COPY start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+
+# Set the startup script as the entrypoint
+ENTRYPOINT ["/usr/local/bin/start.sh"]

@@ -9,10 +9,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV MEGA_EMAIL=""
 ENV MEGA_PASSWORD=""
 
-# Install necessary packages and dependencies
+# Install necessary packages and dependencies, including MEGA CMD's missing dependency
 RUN apt-get update && apt-get install -y \
     libfuse2 fuse libatk-bridge2.0-0 libcups2 libdrm2 libgtk-3-0 \
-    libgbm1 libc-ares2 libmediainfo0v5 libzen0v5 \
+    libgbm1 libc-ares2 libmediainfo0v5 libzen0v5 libpcrecpp0v5 \
     wget git zsh \
     tightvncserver novnc x11vnc xvfb \
     lxde firefox && \
@@ -42,9 +42,9 @@ RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master
 USER root
 
 # Copy scripts and set permissions
-COPY setup-mega.sh start-mega.sh start-vnc.sh /home/vscode/
-RUN chmod +x /home/vscode/setup-mega.sh /home/vscode/start-mega.sh /home/vscode/start-vnc.sh && \
-    chown vscode:vscode /home/vscode/setup-mega.sh /home/vscode/start-mega.sh /home/vscode/start-vnc.sh
+COPY setup-mega.sh start-mega.sh start-vnc.sh start.sh /home/vscode/
+RUN chmod +x /home/vscode/setup-mega.sh /home/vscode/start-mega.sh /home/vscode/start-vnc.sh /home/vscode/start.sh && \
+    chown vscode:vscode /home/vscode/setup-mega.sh /home/vscode/start-mega.sh /home/vscode/start-vnc.sh /home/vscode/start.sh
 
 # Ensure MEGA CMD can run as vscode user
 RUN mkdir -p /home/vscode/.megaCmd && chown -R vscode:vscode /home/vscode/.megaCmd
@@ -55,5 +55,5 @@ USER vscode
 # Set up VNC password
 RUN mkdir -p ~/.vnc && echo "password" | vncpasswd -f > ~/.vnc/passwd && chmod 600 ~/.vnc/passwd
 
-# Entry point to start MEGA CMD, VNC, and Zsh
-ENTRYPOINT ["/bin/bash", "-c", "/home/vscode/start-mega.sh && /home/vscode/start-vnc.sh && /bin/zsh"]
+# Use start.sh as ENTRYPOINT
+ENTRYPOINT ["/home/vscode/start.sh"]

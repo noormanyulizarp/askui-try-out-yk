@@ -35,8 +35,29 @@ trap cleanup SIGINT SIGTERM EXIT
 # Start MEGA CMD server and perform health check
 start_mega_cmd_server
 
-# Mount MEGA storage
-/workspaces/your-repo-name/codespace/mount-cloud-storage.sh
+# Run the setup script for MEGA if needed
+if [ -f "/home/vscode/setup-mega.sh" ]; then
+    echo "Running setup-mega.sh..."
+    /home/vscode/setup-mega.sh
+else
+    echo "setup-mega.sh not found, skipping setup."
+fi
+
+# Mount MEGA storage if the script exists
+if [ -f "/workspaces/your-repo-name/codespace/mount-cloud-storage.sh" ]; then
+    echo "Mounting MEGA storage..."
+    /workspaces/your-repo-name/codespace/mount-cloud-storage.sh
+else
+    echo "mount-cloud-storage.sh not found, skipping cloud storage mounting."
+fi
+
+# Start the VNC server if the script exists
+if [ -f "/home/vscode/start-vnc.sh" ]; then
+    echo "Starting VNC server..."
+    /home/vscode/start-vnc.sh
+else
+    echo "start-vnc.sh not found, skipping VNC server startup."
+fi
 
 # Start Zsh shell interactively, ensure graceful exit
 echo "Starting Zsh shell..."

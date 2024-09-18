@@ -1,7 +1,7 @@
 {
     "name": "Codespace Development Environment",
     "build": {
-        "dockerfile": "../codespace/Dockerfile",
+        "dockerfile": "../codespace/codespace-Dockerfile",
         "context": "../codespace"
     },
     "customizations": {

@@ -58,6 +58,24 @@ mount_mega() {
     fi
 }
 
+# Function to create a desktop shortcut for MEGA
+create_desktop_shortcut() {
+    log_message "Creating desktop shortcut for MEGA..."
+    mkdir -p /home/codespace/Desktop
+    cat <<EOF > /home/codespace/Desktop/MEGA.desktop
+[Desktop Entry]
+Name=MEGA
+Comment=Access your MEGA cloud storage
+Exec=nautilus /workspaces/${CODESPACE_REPO_NAME}/mega
+Icon=folder
+Terminal=false
+Type=Application
+Categories=Utility;
+EOF
+    chmod +x /home/codespace/Desktop/MEGA.desktop
+    log_message "Desktop shortcut for MEGA created."
+}
+
 # Function to sync local folder with MEGA folder
 sync_mega() {
     log_message "Syncing local folder with MEGA..."
@@ -69,9 +87,36 @@ sync_mega() {
     log_message "Sync complete."
 }
 
+# Automatic MEGA CMD update check (optional)
+check_for_mega_update() {
+    log_message "Checking for MEGA CMD updates..."
+    local current_version
+    current_version=$(mega-cmd --version | grep 'MEGA CMD version')
+
+    local latest_version
+    latest_version=$(curl -s https://mega.nz/linux/repo/xUbuntu_22.10/amd64/Packages | grep 'Version:' | awk '{print $2}' | head -1)
+
+    if [ "$current_version" != "$latest_version" ]; then
+        log_message "Updating MEGA CMD to latest version..."
+        wget https://mega.nz/linux/repo/xUbuntu_22.10/amd64/megacmd-xUbuntu_22.10_amd64.deb -O /tmp/megacmd.deb
+        dpkg -i /tmp/megacmd.deb
+        apt-get -f install -y
+        rm /tmp/megacmd.deb
+        log_message "MEGA CMD updated to version $latest_version."
+    else
+        log_message "MEGA CMD is already up to date."
+    fi
+}
+
 # Run MEGA configuration, mounting, and syncing
 configure_mega
 mount_mega
 sync_mega
 
-log_message "MEGA has been mounted and synced."
+# Create the desktop shortcut
+create_desktop_shortcut
+
+# Check for MEGA CMD updates
+check_for_mega_update
+
+log_message "MEGA has been mounted and synced. The desktop shortcut is ready to use."

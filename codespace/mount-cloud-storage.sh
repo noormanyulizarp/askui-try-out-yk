@@ -24,22 +24,39 @@ retry() {
     return 0
 }
 
-# Function to configure MEGA
-configure_mega() {
-    if ! mega-whoami; then
-        if [ -z "$MEGA_EMAIL" ] || [ -z "$MEGA_PASSWORD" ]; then
-            log_message "Error: MEGA credentials not set. Please set MEGA_EMAIL and MEGA_PASSWORD in Codespace secrets."
-            exit 1
-        fi
+# Function to setup MEGA CMD
+setup_mega() {
+    log_message "Setting up MEGA CMD..."
+    sudo apt-get update
+    sudo apt-get install -y libmediainfo0v5 libzen0v5
+    wget https://mega.nz/linux/repo/xUbuntu_22.04/amd64/megacmd-xUbuntu_22.04_amd64.deb -O /tmp/megacmd.deb
+    sudo dpkg -i /tmp/megacmd.deb
+    sudo apt-get -f install -y
+    rm /tmp/megacmd.deb
+
+    if [ -n "$MEGA_EMAIL" ] && [ -n "$MEGA_PASSWORD" ]; then
         log_message "Configuring MEGA..."
-        if ! mega-login "$MEGA_EMAIL" "$MEGA_PASSWORD"; then
-            log_message "Error: Failed to login to MEGA."
-            exit 1
-        fi
-        log_message "Logged into MEGA successfully."
+        mega-login "$MEGA_EMAIL" "$MEGA_PASSWORD"
     else
-        log_message "Already logged into MEGA."
+        log_message "Error: MEGA credentials not set. Please set MEGA_EMAIL and MEGA_PASSWORD in Codespace secrets."
+        exit 1
     fi
+}
+
+# Function to start MEGA CMD server
+start_mega_server() {
+    log_message "Starting MEGA CMD server..."
+    mega-cmd-server &
+
+    for i in {1..50}; do
+        if mega-whoami &> /dev/null; then
+            log_message "MEGA CMD server started successfully."
+            break
+        else
+            log_message "Waiting for MEGA CMD server to start... (Attempt $i)"
+            sleep 1
+        fi
+    done
 }
 
 # Function to mount MEGA
@@ -99,8 +116,8 @@ check_for_mega_update() {
     if [ "$current_version" != "$latest_version" ]; then
         log_message "Updating MEGA CMD to latest version..."
         wget https://mega.nz/linux/repo/xUbuntu_22.10/amd64/megacmd-xUbuntu_22.10_amd64.deb -O /tmp/megacmd.deb
-        dpkg -i /tmp/megacmd.deb
-        apt-get -f install -y
+        sudo dpkg -i /tmp/megacmd.deb
+        sudo apt-get -f install -y
         rm /tmp/megacmd.deb
         log_message "MEGA CMD updated to version $latest_version."
     else
@@ -108,15 +125,12 @@ check_for_mega_update() {
     fi
 }
 
-# Run MEGA configuration, mounting, and syncing
-configure_mega
+# Run setup, start, mount, sync, and create desktop shortcut
+setup_mega
+start_mega_server
 mount_mega
 sync_mega
-
-# Create the desktop shortcut
 create_desktop_shortcut
-
-# Check for MEGA CMD updates
 check_for_mega_update
 
-log_message "MEGA has been mounted and synced. The desktop shortcut is ready to use."
+log_message "MEGA setup complete. The desktop shortcut is ready to use."

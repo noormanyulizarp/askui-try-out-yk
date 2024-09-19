@@ -15,8 +15,7 @@
         }
     },
     "remoteUser": "vscode",
-    "postCreateCommand": "/home/vscode/setup-mega.sh",
-    "postStartCommand": "/home/vscode/start-mega.sh",
+    "postCreateCommand": "/home/vscode/mount-cloud-storage.sh",  // Update to use the new script
     "forwardPorts": [5901, 6080],
     "portsAttributes": {
         "5901": {

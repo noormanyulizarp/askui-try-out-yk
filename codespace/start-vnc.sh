@@ -20,7 +20,7 @@ check_vnc_server() {
     fi
 }
 
-# Kill existing VNC server if running
+# Kill existing VNC server if running and remove lock files
 restart_vnc_server
 
 # Start VNC server on display :1

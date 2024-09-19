@@ -24,10 +24,10 @@ RUN wget https://mega.nz/linux/repo/xUbuntu_22.04/amd64/megacmd-xUbuntu_22.04_am
     && rm /tmp/megacmd.deb \
     && mega-cmd --version
 
-# Copy scripts and set permissions
-COPY setup-mega.sh start-mega.sh start-vnc.sh start.sh /home/vscode/
-RUN chmod +x /home/vscode/*.sh \
-    && chown vscode:vscode /home/vscode/*.sh \
+# Copy the new consolidated script and set permissions
+COPY mount-cloud-storage.sh /home/vscode/
+RUN chmod +x /home/vscode/mount-cloud-storage.sh \
+    && chown vscode:vscode /home/vscode/mount-cloud-storage.sh \
     && mkdir -p /home/vscode/.megaCmd \
     && chown -R vscode:vscode /home/vscode/.megaCmd
 

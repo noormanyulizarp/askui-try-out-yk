@@ -34,10 +34,7 @@ setup_mega() {
     sudo apt-get -f install -y
     rm /tmp/megacmd.deb
 
-    # Check if already logged in
-    if mega-whoami &> /dev/null; then
-        log_message "Already logged in to MEGA."
-    elif [ -n "$MEGA_EMAIL" ] && [ -n "$MEGA_PASSWORD" ]; then
+    if [ -n "$MEGA_EMAIL" ] && [ -n "$MEGA_PASSWORD" ]; then
         log_message "Configuring MEGA..."
         mega-login "$MEGA_EMAIL" "$MEGA_PASSWORD"
     else
@@ -96,8 +93,10 @@ mount_mega() {
 # Function to create a desktop shortcut for MEGA (runs after MEGA is mounted)
 create_desktop_shortcut() {
     log_message "Creating desktop shortcut for MEGA..."
-    mkdir -p /home/codespace/.local/share/applications
-    cat <<EOF > /home/codespace/.local/share/applications/MEGA.desktop
+    # Use a directory where you have permissions to create files
+    local desktop_dir="$HOME/.local/share/applications"
+    mkdir -p "$desktop_dir"
+    cat <<EOF > "$desktop_dir/MEGA.desktop"
 [Desktop Entry]
 Name=MEGA
 Comment=Access your MEGA cloud storage
@@ -107,7 +106,7 @@ Terminal=false
 Type=Application
 Categories=Utility;
 EOF
-    chmod +x /home/codespace/.local/share/applications/MEGA.desktop
+    chmod +x "$desktop_dir/MEGA.desktop"
     log_message "Desktop shortcut for MEGA created."
 }
 

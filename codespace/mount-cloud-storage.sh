@@ -46,7 +46,7 @@ start_mega_server() {
     log_message "Starting MEGA CMD server..."
     mega-cmd-server &
 
-    local max_wait=120  # Set maximum wait time to 120 seconds
+    local max_wait=120
     local elapsed=0
 
     while ! mega-whoami &> /dev/null; do
@@ -55,7 +55,7 @@ start_mega_server() {
             exit 1
         fi
         log_message "Waiting for MEGA CMD server to start... ($elapsed seconds elapsed)"
-        sleep 2  # Check every 2 seconds
+        sleep 2
         elapsed=$((elapsed + 2))
     done
 
@@ -68,8 +68,7 @@ mount_mega() {
         log_message "Mounting MEGA..."
         mkdir -p /workspaces/${CODESPACE_REPO_NAME}/mega
 
-        # Retry with a maximum wait time
-        local max_wait=120  # Maximum wait time is 120 seconds
+        local max_wait=120
         local elapsed=0
 
         until mega-mount /workspaces/${CODESPACE_REPO_NAME}/mega &> /dev/null; do
@@ -78,7 +77,7 @@ mount_mega() {
                 exit 1
             fi
             log_message "Retrying mount... ($elapsed seconds elapsed)"
-            sleep 5  # Retry every 5 seconds
+            sleep 5
             elapsed=$((elapsed + 5))
         done
 
@@ -88,10 +87,9 @@ mount_mega() {
     fi
 }
 
-# Function to create a desktop shortcut for MEGA (runs after MEGA is mounted)
+# Function to create a desktop shortcut for MEGA
 create_desktop_shortcut() {
     log_message "Creating desktop shortcut for MEGA..."
-    # Use a directory where you have permissions to create files
     local desktop_dir="$HOME/Desktop"
     mkdir -p "$desktop_dir"
     cat <<EOF > "$desktop_dir/MEGA.desktop"

@@ -17,11 +17,15 @@
     "remoteUser": "vscode",
     "postCreateCommand": "/home/vscode/setup-mega.sh",
     "postStartCommand": "/home/vscode/start-mega.sh",
-    "forwardPorts": [6080],
+    "forwardPorts": [5901, 6080],
     "portsAttributes": {
+        "5901": {
+            "label": "VNC Server",
+            "onAutoForward": "notify"
+        },
         "6080": {
             "label": "noVNC",
-            "onAutoForward": "notify"
+            "onAutoForward": "openBrowser"
         }
     }
 }

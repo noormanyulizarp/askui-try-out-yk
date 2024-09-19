@@ -41,12 +41,19 @@ RUN if [ ! -d "$HOME/.oh-my-zsh" ]; then \
     && git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM}/plugins/zsh-autosuggestions 2>/dev/null || true \
     && sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/' ~/.zshrc \
     && sed -i '/^plugins=(git)/d' ~/.zshrc \
-    && echo 'plugins=(git zsh-syntax-highlighting zsh-autosuggestions)' >> ~/.zshrc
+    && echo 'plugins=(git zsh-syntax-highlighting zsh-autosuggestions)' >> ~/.zshrc \
+    && echo 'alias gst="git status"' >> ~/.zshrc \
+    && echo 'alias ll="ls -la"' >> ~/.zshrc
 
 # Set up VNC password
 RUN mkdir -p ~/.vnc \
     && echo "password" | vncpasswd -f > ~/.vnc/passwd \
     && chmod 600 ~/.vnc/passwd
+
+# Copy start script
+COPY start.sh /home/vscode/
+RUN chmod +x /home/vscode/start.sh \
+    && chown vscode:vscode /home/vscode/start.sh
 
 # Set default command
 CMD ["/home/vscode/start.sh"]

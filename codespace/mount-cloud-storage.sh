@@ -34,7 +34,10 @@ setup_mega() {
     sudo apt-get -f install -y
     rm /tmp/megacmd.deb
 
-    if [ -n "$MEGA_EMAIL" ] && [ -n "$MEGA_PASSWORD" ]; then
+    # Check if already logged in
+    if mega-whoami &> /dev/null; then
+        log_message "Already logged in to MEGA."
+    elif [ -n "$MEGA_EMAIL" ] && [ -n "$MEGA_PASSWORD" ]; then
         log_message "Configuring MEGA..."
         mega-login "$MEGA_EMAIL" "$MEGA_PASSWORD"
     else
@@ -93,8 +96,8 @@ mount_mega() {
 # Function to create a desktop shortcut for MEGA (runs after MEGA is mounted)
 create_desktop_shortcut() {
     log_message "Creating desktop shortcut for MEGA..."
-    mkdir -p /home/codespace/Desktop
-    cat <<EOF > /home/codespace/Desktop/MEGA.desktop
+    mkdir -p /home/codespace/.local/share/applications
+    cat <<EOF > /home/codespace/.local/share/applications/MEGA.desktop
 [Desktop Entry]
 Name=MEGA
 Comment=Access your MEGA cloud storage
@@ -104,7 +107,7 @@ Terminal=false
 Type=Application
 Categories=Utility;
 EOF
-    chmod +x /home/codespace/Desktop/MEGA.desktop
+    chmod +x /home/codespace/.local/share/applications/MEGA.desktop
     log_message "Desktop shortcut for MEGA created."
 }
 
@@ -112,9 +115,9 @@ EOF
 sync_mega() {
     log_message "Syncing local folder with MEGA..."
     if command -v mega-sync &> /dev/null; then
-        mega-sync /workspaces/${CODESPACE_REPO_NAME}/mega /Codespace-Workspace
+        mega-sync /workspaces/${CODESPACE_REPO_NAME}/mega /GitPod-Workspace
     else
-        mega-cmd sync /workspaces/${CODESPACE_REPO_NAME}/mega /Codespace-Workspace
+        mega-cmd sync /workspaces/${CODESPACE_REPO_NAME}/mega /GitPod-Workspace
     fi
     log_message "Sync complete."
 }
@@ -143,7 +146,6 @@ check_for_mega_update() {
         log_message "Skipping MEGA CMD update check."
     fi
 }
-
 
 # Run setup, start, mount, sync, and create desktop shortcut (only after MEGA is mounted)
 setup_mega

@@ -11,9 +11,13 @@ cleanup() {
 # Trap signals to clean up MEGA CMD server on exit
 trap cleanup SIGINT SIGTERM EXIT
 
-# Run the mount-cloud-storage.sh script
-echo "Running mount-cloud-storage.sh..."
-/home/vscode/mount-cloud-storage.sh
+# Check if mount-cloud-storage.sh exists
+if [ -f "/home/vscode/mount-cloud-storage.sh" ]; then
+    echo "Running mount-cloud-storage.sh..."
+    /home/vscode/mount-cloud-storage.sh
+else
+    echo "mount-cloud-storage.sh not found, skipping MEGA setup."
+fi
 
 # Start the VNC server
 if [ -f "/home/vscode/start-vnc.sh" ]; then

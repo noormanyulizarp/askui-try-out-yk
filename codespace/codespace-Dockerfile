@@ -1,6 +1,9 @@
 # Base image
 FROM mcr.microsoft.com/vscode/devcontainers/base:ubuntu-22.04
 
+# Use root for installation
+USER root
+
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
     MEGA_EMAIL="" \
@@ -10,28 +13,48 @@ ENV DEBIAN_FRONTEND=noninteractive \
     CHECK_MEGA_UPDATE="true"
 
 # Install necessary packages and dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -yq \
     libfuse2 fuse libatk-bridge2.0-0 libcups2 libdrm2 libgtk-3-0 \
     libgbm1 libc-ares2 libmediainfo0v5 libzen0v5 libpcrecpp0v5 \
     wget git zsh \
     tightvncserver x11vnc xvfb \
     xfce4 xfce4-goodies chromium-browser \
-    nautilus \
-    sudo \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    nautilus sudo \
+    && apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install MEGA CMD
-RUN wget https://mega.nz/linux/repo/xUbuntu_22.04/amd64/megacmd-xUbuntu_22.04_amd64.deb -O /tmp/megacmd.deb \
-    && dpkg -i /tmp/megacmd.deb \
-    && apt-get -f install -y \
-    && rm /tmp/megacmd.deb
+RUN wget https://mega.nz/linux/repo/xUbuntu_22.10/amd64/megacmd-xUbuntu_22.10_amd64.deb -O /tmp/megacmd.deb && \
+    dpkg -i /tmp/megacmd.deb || (apt-get -f install -y && dpkg -i /tmp/megacmd.deb) && \
+    rm /tmp/megacmd.deb && \
+    mega-cmd --version || { echo "MEGA CMD installation failed"; exit 1; }
 
 # Install noVNC
-RUN mkdir -p /opt/novnc \
-    && wget -qO- https://github.com/novnc/noVNC/archive/refs/heads/master.tar.gz | tar xz --strip-components=1 -C /opt/novnc
+RUN mkdir -p /opt/novnc && \
+    wget -qO- https://github.com/novnc/noVNC/archive/refs/heads/master.tar.gz | tar xz --strip-components=1 -C /opt/novnc
 
-# Switch to root user to set permissions
+# Ensure /usr/local/bin is in PATH
+ENV PATH="/usr/local/bin:${PATH}"
+
+# Switch to vscode user for Oh My Zsh installation
+USER vscode
+
+# Install Oh My Zsh and necessary plugins
+RUN if [ ! -d "$HOME/.oh-my-zsh" ]; then \
+        sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended; \
+    fi && \
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting && \
+    git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM}/plugins/zsh-autosuggestions && \
+    sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/' ~/.zshrc && \
+    sed -i '/^plugins=(git)/d' ~/.zshrc && \
+    echo 'plugins=(git zsh-syntax-highlighting zsh-autosuggestions)' >> ~/.zshrc && \
+    echo 'alias gst="git status"' >> ~/.zshrc && \
+    echo 'alias ll="ls -la"' >> ~/.zshrc && \
+    echo 'POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(user dir vcs)' > ~/.p10k.zsh && \
+    echo 'POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status root_indicator background_jobs)' >> ~/.p10k.zsh
+
+# Switch back to root for final steps
 USER root
 
 # Copy and configure scripts
@@ -40,28 +63,13 @@ COPY start-vnc.sh /home/vscode/
 COPY start.sh /home/vscode/
 
 # Ensure scripts are executable and owned by vscode user
-RUN chmod +x /home/vscode/*.sh \
-    && chown vscode:vscode /home/vscode/*.sh
-
-# Switch back to vscode user for remaining setup
-USER vscode
-
-# Install Oh My Zsh and necessary plugins
-RUN if [ ! -d "$HOME/.oh-my-zsh" ]; then \
-        sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended; \
-    fi \
-    && git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting 2>/dev/null || true \
-    && git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM}/plugins/zsh-autosuggestions 2>/dev/null || true \
-    && sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/' ~/.zshrc \
-    && sed -i '/^plugins=(git)/d' ~/.zshrc \
-    && echo 'plugins=(git zsh-syntax-highlighting zsh-autosuggestions)' >> ~/.zshrc \
-    && echo 'alias gst="git status"' >> ~/.zshrc \
-    && echo 'alias ll="ls -la"' >> ~/.zshrc
+RUN chmod +x /home/vscode/*.sh && \
+    chown vscode:vscode /home/vscode/*.sh
 
 # Set up VNC password
-RUN mkdir -p ~/.vnc \
-    && echo "password" | vncpasswd -f > ~/.vnc/passwd \
-    && chmod 600 ~/.vnc/passwd
+RUN mkdir -p /home/vscode/.vnc && \
+    echo "password" | vncpasswd -f > /home/vscode/.vnc/passwd && \
+    chmod 600 /home/vscode/.vnc/passwd
 
 # Set default command
 CMD ["/home/vscode/start.sh"]

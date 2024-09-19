@@ -18,9 +18,20 @@ vncserver :1 -geometry 1280x800 -depth 24 &
 # Check if VNC server started successfully
 if ! pgrep Xtightvnc > /dev/null; then
     echo "Error: VNC server failed to start."
-    # Print VNC server log for troubleshooting
-    echo "Checking VNC server log..."
-    cat ~/.vnc/*.log
+
+    # Check if log directory exists and print log files if available
+    if [ -d ~/.vnc ]; then
+        echo "Checking VNC server log..."
+        log_files=(~/.vnc/*.log)
+        if [ -e "${log_files[0]}" ]; then
+            cat "${log_files[@]}"
+        else
+            echo "No VNC log files found."
+        fi
+    else
+        echo "VNC log directory does not exist."
+    fi
+
     exit 1
 fi
 
@@ -41,3 +52,6 @@ echo "If you encounter issues, try the following steps:"
 echo "1. Check VNC server logs for additional errors: cat ~/.vnc/*.log"
 echo "2. Restart the Codespaces container to apply changes."
 echo "3. Ensure no other applications are using ports 5901 or 6080."
+
+# Ensure permissions are correct
+chmod +r ~/.vnc/*.log

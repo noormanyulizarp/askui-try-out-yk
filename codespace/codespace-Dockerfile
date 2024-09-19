@@ -17,20 +17,33 @@ RUN apt-get update && apt-get install -y \
     tightvncserver x11vnc xvfb \
     xfce4 xfce4-goodies chromium-browser \
     nautilus \
+    sudo \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Install MEGA CMD
+RUN wget https://mega.nz/linux/repo/xUbuntu_22.04/amd64/megacmd-xUbuntu_22.04_amd64.deb -O /tmp/megacmd.deb \
+    && dpkg -i /tmp/megacmd.deb \
+    && apt-get -f install -y \
+    && rm /tmp/megacmd.deb
 
 # Install noVNC
 RUN mkdir -p /opt/novnc \
     && wget -qO- https://github.com/novnc/noVNC/archive/refs/heads/master.tar.gz | tar xz --strip-components=1 -C /opt/novnc
 
+# Switch to root user to set permissions
+USER root
+
 # Copy and configure scripts
 COPY mount-cloud-storage.sh /home/vscode/
 COPY start-vnc.sh /home/vscode/
-RUN chmod +x /home/vscode/mount-cloud-storage.sh /home/vscode/start-vnc.sh \
-    && chown vscode:vscode /home/vscode/mount-cloud-storage.sh /home/vscode/start-vnc.sh
+COPY start.sh /home/vscode/
 
-# Switch to vscode user for remaining setup
+# Ensure scripts are executable and owned by vscode user
+RUN chmod +x /home/vscode/*.sh \
+    && chown vscode:vscode /home/vscode/*.sh
+
+# Switch back to vscode user for remaining setup
 USER vscode
 
 # Install Oh My Zsh and necessary plugins
@@ -49,11 +62,6 @@ RUN if [ ! -d "$HOME/.oh-my-zsh" ]; then \
 RUN mkdir -p ~/.vnc \
     && echo "password" | vncpasswd -f > ~/.vnc/passwd \
     && chmod 600 ~/.vnc/passwd
-
-# Copy start script
-COPY start.sh /home/vscode/
-RUN chmod +x /home/vscode/start.sh \
-    && chown vscode:vscode /home/vscode/start.sh
 
 # Set default command
 CMD ["/home/vscode/start.sh"]

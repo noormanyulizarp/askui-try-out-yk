@@ -30,7 +30,7 @@ Xvfb :1 -screen 0 1280x800x24 &
 sleep 5
 
 # Start noVNC server
-/usr/bin/noVNC --vnc localhost:5901 --listen 8080 &
+/opt/novnc/utils/novnc_server --vnc localhost:5901 --listen 8080 &
 
 # Check if VNC server is running
 if ! check_vnc_server; then

@@ -24,20 +24,29 @@ retry() {
     return 0
 }
 
+# Function to check if MEGA CMD is installed
+is_mega_cmd_installed() {
+    command -v mega-cmd-server &> /dev/null
+}
+
 # Function to setup MEGA CMD
 setup_mega() {
-    log_message "Setting up MEGA CMD..."
-    wget https://mega.nz/linux/repo/xUbuntu_22.04/amd64/megacmd-xUbuntu_22.04_amd64.deb -O /tmp/megacmd.deb
-    sudo dpkg -i /tmp/megacmd.deb
-    sudo apt-get -f install -y
-    rm /tmp/megacmd.deb
+    if ! is_mega_cmd_installed; then
+        log_message "MEGA CMD not found. Installing..."
+        wget https://mega.nz/linux/repo/xUbuntu_22.04/amd64/megacmd-xUbuntu_22.04_amd64.deb -O /tmp/megacmd.deb
+        sudo dpkg -i /tmp/megacmd.deb
+        sudo apt-get -f install -y
+        rm /tmp/megacmd.deb
 
-    if [ -n "$MEGA_EMAIL" ] && [ -n "$MEGA_PASSWORD" ]; then
-        log_message "Configuring MEGA..."
-        mega-login "$MEGA_EMAIL" "$MEGA_PASSWORD"
+        if [ -n "$MEGA_EMAIL" ] && [ -n "$MEGA_PASSWORD" ]; then
+            log_message "Configuring MEGA..."
+            mega-login "$MEGA_EMAIL" "$MEGA_PASSWORD"
+        else
+            log_message "Error: MEGA credentials not set. Please set MEGA_EMAIL and MEGA_PASSWORD in environment variables."
+            exit 1
+        fi
     else
-        log_message "Error: MEGA credentials not set. Please set MEGA_EMAIL and MEGA_PASSWORD in environment variables."
-        exit 1
+        log_message "MEGA CMD is already installed."
     fi
 }
 

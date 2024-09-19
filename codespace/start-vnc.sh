@@ -9,7 +9,18 @@ restart_vnc_server() {
     fi
 }
 
-# Restart VNC server
+# Function to check if VNC server is running
+check_vnc_server() {
+    if pgrep Xtightvnc > /dev/null; then
+        echo "VNC server is running."
+        return 0
+    else
+        echo "VNC server is not running."
+        return 1
+    fi
+}
+
+# Kill existing VNC server if running
 restart_vnc_server
 
 # Start VNC server on display :1
@@ -19,7 +30,7 @@ vncserver :1 -geometry 1280x800 -depth 24 &
 sleep 5
 
 # Check if VNC server started successfully
-if ! pgrep Xtightvnc > /dev/null; then
+if ! check_vnc_server; then
     echo "Error: VNC server failed to start."
 
     # Check if log directory exists and print log files if available

@@ -15,8 +15,8 @@
         }
     },
     "remoteUser": "vscode",
-    "postCreateCommand": "/home/vscode/mount-cloud-storage.sh && /home/vscode/start-vnc.sh",  // Menjalankan skrip untuk mount dan VNC
-    "onCreateCommand": "/home/vscode/start-vnc.sh",  // Memastikan VNC server dimulai saat kontainer dibuat
+    "postCreateCommand": "/home/vscode/mount-cloud-storage.sh",
+    "onCreateCommand": "/home/vscode/start-vnc.sh",  // Ensure this path is correct
     "forwardPorts": [5901, 6080],
     "portsAttributes": {
         "5901": {

@@ -10,9 +10,12 @@ restart_vnc_server() {
 }
 
 # Ensure proper permissions
-chown root:root /tmp/.X11-unix
-chmod 1777 /tmp/.X11-unix
-mkdir -p /opt/novnc/utils && chown -R vscode:vscode /opt/novnc/utils
+if [ -d /tmp/.X11-unix ]; then
+    chown root:root /tmp/.X11-unix
+    chmod 1777 /tmp/.X11-unix
+fi
+
+mkdir -p /opt/novnc/utils/websockify && chown -R vscode:vscode /opt/novnc/utils
 
 # Function to check if VNC server is running
 check_vnc_server() {
@@ -35,7 +38,7 @@ Xvfb :1 -screen 0 1280x800x24 &
 sleep 5
 
 # Start noVNC server
-/opt/novnc/utils/novnc_server --vnc localhost:5901 --listen 8080 &
+/opt/novnc/utils/websockify/websockify --web /opt/novnc/ 8080 localhost:5901 &
 
 # Check if VNC server is running
 if ! check_vnc_server; then

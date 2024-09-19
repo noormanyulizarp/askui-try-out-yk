@@ -14,11 +14,15 @@ RUN apt-get update && apt-get install -y \
     libfuse2 fuse libatk-bridge2.0-0 libcups2 libdrm2 libgtk-3-0 \
     libgbm1 libc-ares2 libmediainfo0v5 libzen0v5 libpcrecpp0v5 \
     wget git zsh \
-    tightvncserver novnc x11vnc xvfb \
+    tightvncserver x11vnc xvfb \
     xfce4 xfce4-goodies chromium-browser \
     nautilus \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Install noVNC
+RUN mkdir -p /opt/novnc \
+    && wget -qO- https://github.com/novnc/noVNC/archive/refs/heads/master.tar.gz | tar xz --strip-components=1 -C /opt/novnc
 
 # Copy and configure scripts
 COPY mount-cloud-storage.sh /home/vscode/

@@ -2,16 +2,16 @@
 
 # Function to kill existing VNC server and remove lock files
 restart_vnc_server() {
-    if pgrep Xtightvnc > /dev/null; then
+    if pgrep Xvfb > /dev/null; then
         echo "VNC server already running, attempting to restart..."
-        vncserver -kill :1
+        pkill Xvfb
         rm -f /tmp/.X1-lock
     fi
 }
 
 # Function to check if VNC server is running
 check_vnc_server() {
-    if pgrep Xtightvnc > /dev/null; then
+    if pgrep Xvfb > /dev/null; then
         echo "VNC server is running."
         return 0
     else
@@ -23,8 +23,8 @@ check_vnc_server() {
 # Kill existing VNC server if running and remove lock files
 restart_vnc_server
 
-# Start VNC server on display :1
-vncserver :1 -geometry 1280x800 -depth 24
+# Start VNC server on display :1 with Xvfb
+Xvfb :1 -screen 0 1280x800x24 &
 
 # Wait for VNC server to start
 sleep 5

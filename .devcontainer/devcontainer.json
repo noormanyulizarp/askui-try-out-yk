@@ -17,13 +17,13 @@
     "remoteUser": "vscode",
     "postCreateCommand": "/home/vscode/start.sh",
     "onCreateCommand": "/home/vscode/start-vnc.sh",
-    "forwardPorts": [5901, 6080],
+    "forwardPorts": [5901, 8080],
     "portsAttributes": {
         "5901": {
             "label": "VNC Server",
             "onAutoForward": "notify"
         },
-        "6080": {
+        "8080": {
             "label": "noVNC",
             "onAutoForward": "openBrowser"
         }

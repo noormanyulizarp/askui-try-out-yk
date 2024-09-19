@@ -36,7 +36,7 @@ setup_mega() {
         log_message "Configuring MEGA..."
         mega-login "$MEGA_EMAIL" "$MEGA_PASSWORD"
     else
-        log_message "Error: MEGA credentials not set. Please set MEGA_EMAIL and MEGA_PASSWORD in Codespace secrets."
+        log_message "Error: MEGA credentials not set. Please set MEGA_EMAIL and MEGA_PASSWORD in environment variables."
         exit 1
     fi
 }
@@ -90,7 +90,7 @@ mount_mega() {
 # Function to create a desktop shortcut for MEGA
 create_desktop_shortcut() {
     log_message "Creating desktop shortcut for MEGA..."
-    local desktop_dir="$HOME/Desktop"
+    local desktop_dir="/home/vscode/Desktop"
     mkdir -p "$desktop_dir"
     cat <<EOF > "$desktop_dir/MEGA.desktop"
 [Desktop Entry]

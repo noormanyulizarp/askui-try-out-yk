@@ -15,6 +15,9 @@ restart_vnc_server
 # Start VNC server on display :1
 vncserver :1 -geometry 1280x800 -depth 24 &
 
+# Wait for a moment to allow VNC server to start
+sleep 5
+
 # Check if VNC server started successfully
 if ! pgrep Xtightvnc > /dev/null; then
     echo "Error: VNC server failed to start."
@@ -47,11 +50,13 @@ fi
 echo "VNC server started on port 5901"
 echo "noVNC started on port 6080"
 
+# Ensure permissions are correct for log files
+if [ -d ~/.vnc ]; then
+    chmod +r ~/.vnc/*.log
+fi
+
 # Step-by-step troubleshooting
 echo "If you encounter issues, try the following steps:"
 echo "1. Check VNC server logs for additional errors: cat ~/.vnc/*.log"
 echo "2. Restart the Codespaces container to apply changes."
 echo "3. Ensure no other applications are using ports 5901 or 6080."
-
-# Ensure permissions are correct
-chmod +r ~/.vnc/*.log

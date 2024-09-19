@@ -6,7 +6,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     MEGA_EMAIL="" \
     MEGA_PASSWORD="" \
     PATH="/usr/local/bin:${PATH}" \
-    ZSH_CUSTOM=/home/vscode/.oh-my-zsh/custom
+    ZSH_CUSTOM=/home/vscode/.oh-my-zsh/custom \
+    CHECK_MEGA_UPDATE="true"
 
 # Install necessary packages and dependencies
 RUN apt-get update && apt-get install -y \

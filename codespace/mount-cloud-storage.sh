@@ -27,8 +27,6 @@ retry() {
 # Function to setup MEGA CMD
 setup_mega() {
     log_message "Setting up MEGA CMD..."
-    sudo apt-get update
-    sudo apt-get install -y libmediainfo0v5 libzen0v5
     wget https://mega.nz/linux/repo/xUbuntu_22.04/amd64/megacmd-xUbuntu_22.04_amd64.deb -O /tmp/megacmd.deb
     sudo dpkg -i /tmp/megacmd.deb
     sudo apt-get -f install -y
@@ -116,48 +114,14 @@ sync_mega() {
     if command -v mega-sync &> /dev/null; then
         mega-sync /workspaces/${CODESPACE_REPO_NAME}/mega /GitPod-Workspace
     else
-        mega-cmd sync /workspaces/${CODESPACE_REPO_NAME}/mega /GitPod-Workspace
+        mega-cmd sync start /workspaces/${CODESPACE_REPO_NAME}/mega /GitPod-Workspace
     fi
     log_message "Sync complete."
 }
 
-# Automatic MEGA CMD update check (optional)
-check_for_mega_update() {
-    if [[ "$CHECK_MEGA_UPDATE" == "true" ]]; then
-        log_message "Checking for MEGA CMD updates..."
-        local current_version
-        current_version=$(mega-cmd --version | grep 'MEGA CMD version')
-
-        local latest_version
-        latest_version=$(curl -s https://mega.nz/linux/repo/xUbuntu_22.10/amd64/Packages | grep 'Version:' | awk '{print $2}' | head -1)
-
-        if [ "$current_version" != "$latest_version" ]; then
-            log_message "Updating MEGA CMD to latest version..."
-            wget https://mega.nz/linux/repo/xUbuntu_22.10/amd64/megacmd-xUbuntu_22.10_amd64.deb -O /tmp/megacmd.deb
-            sudo dpkg -i /tmp/megacmd.deb
-            sudo apt-get -f install -y
-            rm /tmp/megacmd.deb
-            log_message "MEGA CMD updated to version $latest_version."
-        else
-            log_message "MEGA CMD is already up to date."
-        fi
-    else
-        log_message "Skipping MEGA CMD update check."
-    fi
-}
-
-# Run setup, start, mount, sync, and create desktop shortcut (only after MEGA is mounted)
-setup_mega
-start_mega_server
-
-if mount_mega; then
-    sync_mega
-    create_desktop_shortcut
-else
-    log_message "Error: Mounting MEGA failed, skipping sync and shortcut creation."
-    exit 1
-fi
-
-check_for_mega_update
-
-log_message "MEGA setup complete. The desktop shortcut is ready to use."
+# Ensure MEGA CMD server is running and mount MEGA
+retry setup_mega 3 10
+retry start_mega_server 3 10
+retry mount_mega 3 10
+sync_mega
+create_desktop_shortcut

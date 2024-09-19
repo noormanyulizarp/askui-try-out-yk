@@ -32,7 +32,9 @@ RUN wget https://mega.nz/linux/repo/xUbuntu_22.10/amd64/megacmd-xUbuntu_22.10_am
 
 # Install noVNC
 RUN mkdir -p /opt/novnc && \
-    wget -qO- https://github.com/novnc/noVNC/archive/refs/heads/master.tar.gz | tar xz --strip-components=1 -C /opt/novnc
+    wget -qO- https://github.com/novnc/noVNC/archive/refs/heads/master.tar.gz | tar xz --strip-components=1 -C /opt/novnc && \
+    mkdir -p /opt/novnc/utils && \
+    chown -R vscode:vscode /opt/novnc
 
 # Ensure /usr/local/bin is in PATH
 ENV PATH="/usr/local/bin:${PATH}"

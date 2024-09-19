@@ -16,7 +16,6 @@ start_mega_cmd_server() {
         fi
     done
     
-    # If the server doesn't start after 50 attempts, log an error and exit
     echo "Error: MEGA CMD server failed to start after multiple attempts."
     exit 1
 }
@@ -44,9 +43,9 @@ else
 fi
 
 # Mount MEGA storage if the script exists
-if [ -f "/workspaces/your-repo-name/codespace/mount-cloud-storage.sh" ]; then
+if [ -f "/workspaces/${CODESPACE_REPO_NAME}/codespace/mount-cloud-storage.sh" ]; then
     echo "Mounting MEGA storage..."
-    /workspaces/your-repo-name/codespace/mount-cloud-storage.sh
+    /workspaces/${CODESPACE_REPO_NAME}/codespace/mount-cloud-storage.sh
 else
     echo "mount-cloud-storage.sh not found, skipping cloud storage mounting."
 fi

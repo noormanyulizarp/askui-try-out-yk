@@ -27,5 +27,9 @@
             "label": "noVNC",
             "onAutoForward": "openBrowser"
         }
+    },
+    "containerEnv": {
+        "MEGA_EMAIL": "${MEGA_EMAIL}",
+        "MEGA_PASSWORD": "${MEGA_PASSWORD}"
     }
 }

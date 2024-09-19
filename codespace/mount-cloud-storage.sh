@@ -44,10 +44,10 @@ configure_mega() {
 
 # Function to mount MEGA
 mount_mega() {
-    if ! mountpoint -q /workspaces/your-repo-name/mega; then
+    if ! mountpoint -q /workspaces/${CODESPACE_REPO_NAME}/mega; then
         log_message "Mounting MEGA..."
-        mkdir -p /workspaces/your-repo-name/mega
-        if retry "mega-mount /workspaces/your-repo-name/mega" 5 2; then
+        mkdir -p /workspaces/${CODESPACE_REPO_NAME}/mega
+        if retry "mega-mount /workspaces/${CODESPACE_REPO_NAME}/mega" 5 2; then
             log_message "MEGA mounted successfully."
         else
             log_message "Error: Failed to mount MEGA."
@@ -62,9 +62,9 @@ mount_mega() {
 sync_mega() {
     log_message "Syncing local folder with MEGA..."
     if command -v mega-sync &> /dev/null; then
-        mega-sync /workspaces/your-repo-name/mega /Codespace-Workspace
+        mega-sync /workspaces/${CODESPACE_REPO_NAME}/mega /Codespace-Workspace
     else
-        mega-cmd sync /workspaces/your-repo-name/mega /Codespace-Workspace
+        mega-cmd sync /workspaces/${CODESPACE_REPO_NAME}/mega /Codespace-Workspace
     fi
     log_message "Sync complete."
 }

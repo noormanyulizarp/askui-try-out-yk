@@ -94,7 +94,7 @@ mount_mega() {
 create_desktop_shortcut() {
     log_message "Creating desktop shortcut for MEGA..."
     # Use a directory where you have permissions to create files
-    local desktop_dir="$HOME/.local/share/applications"
+    local desktop_dir="$HOME/Desktop"
     mkdir -p "$desktop_dir"
     cat <<EOF > "$desktop_dir/MEGA.desktop"
 [Desktop Entry]

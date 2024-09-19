@@ -1,59 +1,54 @@
 # Base image
 FROM mcr.microsoft.com/vscode/devcontainers/base:ubuntu-22.04
 
-# Use root for installation
-USER root
-
 # Set environment variables
-ENV DEBIAN_FRONTEND=noninteractive
-ENV MEGA_EMAIL=""
-ENV MEGA_PASSWORD=""
+ENV DEBIAN_FRONTEND=noninteractive \
+    MEGA_EMAIL="" \
+    MEGA_PASSWORD="" \
+    PATH="/usr/local/bin:${PATH}" \
+    ZSH_CUSTOM=/home/vscode/.oh-my-zsh/custom
 
-# Install necessary packages and dependencies, including MEGA CMD's missing dependency
+# Install necessary packages and dependencies
 RUN apt-get update && apt-get install -y \
     libfuse2 fuse libatk-bridge2.0-0 libcups2 libdrm2 libgtk-3-0 \
     libgbm1 libc-ares2 libmediainfo0v5 libzen0v5 libpcrecpp0v5 \
     wget git zsh \
     tightvncserver novnc x11vnc xvfb \
-    lxde firefox && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    lxde firefox \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install MEGA CMD
-RUN wget https://mega.nz/linux/repo/xUbuntu_22.04/amd64/megacmd-xUbuntu_22.04_amd64.deb -O /tmp/megacmd.deb && \
-    dpkg -i /tmp/megacmd.deb || (apt-get -f install -y && dpkg -i /tmp/megacmd.deb) && \
-    rm /tmp/megacmd.deb && \
-    mega-cmd --version || { echo "MEGA CMD installation failed"; exit 1; }
-
-# Ensure /usr/local/bin is in PATH
-ENV PATH="/usr/local/bin:${PATH}"
-
-# Switch to vscode user for Oh My Zsh installation
-USER vscode
-
-# Install Oh My Zsh and necessary plugins
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \
-    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting && \
-    git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions && \
-    sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/' ~/.zshrc && \
-    sed -i 's/plugins=(git)/plugins=(git zsh-syntax-highlighting zsh-autosuggestions)/' ~/.zshrc
-
-# Switch back to root for final steps
-USER root
+RUN wget https://mega.nz/linux/repo/xUbuntu_22.04/amd64/megacmd-xUbuntu_22.04_amd64.deb -O /tmp/megacmd.deb \
+    && (dpkg -i /tmp/megacmd.deb || (apt-get update && apt-get -f install -y && dpkg -i /tmp/megacmd.deb)) \
+    && rm /tmp/megacmd.deb \
+    && mega-cmd --version
 
 # Copy scripts and set permissions
 COPY setup-mega.sh start-mega.sh start-vnc.sh start.sh /home/vscode/
-RUN chmod +x /home/vscode/setup-mega.sh /home/vscode/start-mega.sh /home/vscode/start-vnc.sh /home/vscode/start.sh && \
-    chown vscode:vscode /home/vscode/setup-mega.sh /home/vscode/start-mega.sh /home/vscode/start-vnc.sh /home/vscode/start.sh
+RUN chmod +x /home/vscode/*.sh \
+    && chown vscode:vscode /home/vscode/*.sh \
+    && mkdir -p /home/vscode/.megaCmd \
+    && chown -R vscode:vscode /home/vscode/.megaCmd
 
-# Ensure MEGA CMD can run as vscode user
-RUN mkdir -p /home/vscode/.megaCmd && chown -R vscode:vscode /home/vscode/.megaCmd
-
-# Switch back to vscode user
+# Switch to vscode user for remaining setup
 USER vscode
 
+# Install Oh My Zsh and necessary plugins
+RUN if [ ! -d "$HOME/.oh-my-zsh" ]; then \
+        sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended; \
+    fi \
+    && git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting 2>/dev/null || true \
+    && git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM}/plugins/zsh-autosuggestions 2>/dev/null || true \
+    && sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/' ~/.zshrc \
+    && if ! grep -q "zsh-syntax-highlighting" ~/.zshrc; then \
+           sed -i 's/plugins=(git)/plugins=(git zsh-syntax-highlighting zsh-autosuggestions)/' ~/.zshrc; \
+       fi
+
 # Set up VNC password
-RUN mkdir -p ~/.vnc && echo "password" | vncpasswd -f > ~/.vnc/passwd && chmod 600 ~/.vnc/passwd
+RUN mkdir -p ~/.vnc \
+    && echo "password" | vncpasswd -f > ~/.vnc/passwd \
+    && chmod 600 ~/.vnc/passwd
 
 # Use start.sh as ENTRYPOINT
 ENTRYPOINT ["/home/vscode/start.sh"]

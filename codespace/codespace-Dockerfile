@@ -33,6 +33,7 @@ RUN wget https://mega.nz/linux/repo/xUbuntu_22.10/amd64/megacmd-xUbuntu_22.10_am
 # Install noVNC and websockify
 RUN mkdir -p /opt/novnc && \
     wget -qO- https://github.com/novnc/noVNC/archive/refs/heads/master.tar.gz | tar xz --strip-components=1 -C /opt/novnc && \
+    mkdir -p /opt/novnc/utils/websockify && \
     wget -qO- https://github.com/novnc/websockify/archive/refs/heads/master.tar.gz | tar xz --strip-components=1 -C /opt/novnc/utils/websockify && \
     chmod +x /opt/novnc/utils/websockify/run && \
     ln -s /opt/novnc/utils/websockify/run /usr/local/bin/websockify && \

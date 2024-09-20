@@ -19,10 +19,14 @@ else
     echo "mount-cloud-storage.sh not found, skipping MEGA setup."
 fi
 
-# Start the VNC server if start-vnc.sh exists
+# Start the VNC server if start-vnc.sh exists, with error handling
 if [ -f "/home/vscode/start-vnc.sh" ]; then
     echo "Starting VNC server..."
-    /home/vscode/start-vnc.sh
+    if /home/vscode/start-vnc.sh; then
+        echo "VNC server started successfully."
+    else
+        echo "Failed to start VNC server. You can try starting it manually later."
+    fi
 else
     echo "start-vnc.sh not found, skipping VNC server startup."
 fi

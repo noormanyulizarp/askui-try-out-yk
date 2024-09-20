@@ -11,10 +11,11 @@ restart_vnc_server() {
         log_message "VNC server already running, attempting to restart..."
         pkill Xvfb
         rm -f /tmp/.X1-lock
+        log_message "VNC server restarted successfully."
     fi
 }
 
-# Ensure proper permissions
+# Ensure proper permissions on X11 files
 ensure_permissions() {
     if [ -d /tmp/.X11-unix ]; then
         # Change ownership only if necessary
@@ -28,10 +29,12 @@ ensure_permissions() {
 
 # Ensure noVNC utilities are correctly set up
 setup_novnc() {
-    mkdir -p /opt/novnc/utils/websockify
-    # Ensure websockify is not a directory
+    # Ensure websockify is not a directory and is executable
     if [ -d /opt/novnc/utils/websockify/websockify ]; then
         log_message "Error: /opt/novnc/utils/websockify/websockify is a directory, not an executable."
+        exit 1
+    elif [ ! -x /opt/novnc/utils/websockify/websockify ]; then
+        log_message "Error: /opt/novnc/utils/websockify/websockify is not executable."
         exit 1
     fi
     chown -R vscode:vscode /opt/novnc/utils || log_message "Error: Could not set ownership on /opt/novnc/utils"

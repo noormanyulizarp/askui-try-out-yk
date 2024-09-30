@@ -118,14 +118,23 @@ start_vnc_server() {
     log_message "Starting VNC server on display :${DISPLAY_NUMBER} (port ${VNC_PORT})..."
     Xvfb :${DISPLAY_NUMBER} -screen 0 1280x800x24 &
     
-    # Wait a few seconds for VNC server to initialize
-    sleep 5
+    # Wait for a longer time for the VNC server to initialize
+    sleep 10
     
     if pgrep Xvfb > /dev/null; then
         log_message "VNC server started successfully on display :${DISPLAY_NUMBER} (port ${VNC_PORT})."
     else
         log_message "Error: VNC server failed to start."
         exit 1
+    fi
+    
+    # Verify VNC is listening on the correct port
+    log_message "Verifying if VNC is listening on port $VNC_PORT..."
+    if ! netstat -tuln | grep ":$VNC_PORT" > /dev/null; then
+        log_message "Error: VNC is not listening on port $VNC_PORT. Exiting..."
+        exit 1
+    else
+        log_message "VNC is confirmed to be listening on $VNC_PORT."
     fi
 }
 
@@ -142,6 +151,17 @@ kill_process_on_port() {
     else
         log_message "Port $PORT is free."
     fi
+}
+
+# Find a free port dynamically
+find_free_port() {
+    PORT=8080  # Start checking from this port
+    while lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null; do
+        log_message "Port $PORT is in use, trying next port..."
+        ((PORT++))
+    done
+    log_message "Found available port: $PORT"
+    echo "$PORT"
 }
 
 # Function to check if VNC server is running on the correct port
@@ -178,19 +198,20 @@ start_vnc_server
 # Check if VNC is running on the correct port
 check_vnc_port
 
-# Kill any process using port 8080
-kill_process_on_port 8080
+# Find a free port for noVNC dynamically
+NOVNC_PORT=$(find_free_port)
 
 # Start noVNC server on the dynamic VNC port
-log_message "Starting noVNC server..."
-$WEBSOCKIFY_PATH --web /opt/novnc/ 8080 localhost:$VNC_PORT &
+log_message "Starting noVNC server on port $NOVNC_PORT..."
+$WEBSOCKIFY_PATH --web /opt/novnc/ $NOVNC_PORT localhost:$VNC_PORT &
 
 # Check if the noVNC server can connect to the VNC server
 log_message "Waiting for noVNC to connect..."
-sleep 5
+sleep 10  # Increased wait time for connection
+
 if ! netstat -an | grep $VNC_PORT &> /dev/null; then
     log_message "Error: noVNC could not connect to localhost:$VNC_PORT. Check if the VNC server is running on port $VNC_PORT."
     exit 1
 else
-    log_message "noVNC successfully connected to VNC server at localhost:$VNC_PORT."
+    log_message "noVNC successfully connected to VNC server at localhost:$VNC_PORT on port $NOVNC_PORT."
 fi

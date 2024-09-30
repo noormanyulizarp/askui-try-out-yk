@@ -120,10 +120,10 @@ start_vnc_server() {
     done
     
     log_message "Starting VNC server on display :${CUSTOM_DISPLAY_NUMBER} (port ${CUSTOM_VNC_PORT})..."
-    Xvfb :${CUSTOM_DISPLAY_NUMBER} -screen 0 1280x800x24 &
-    
+    Xvfb :${CUSTOM_DISPLAY_NUMBER} -screen 0 1280x800x24 > /var/log/xvfb.log 2>&1 &
+
     # Wait for a longer time for the VNC server to initialize
-    sleep 15  # Increased sleep duration for better initialization
+    sleep 20  # Increased sleep duration for better initialization
     
     # Check if the VNC server is listening on the correct port in a loop
     log_message "Verifying if VNC is listening on port $CUSTOM_VNC_PORT..."
@@ -140,7 +140,6 @@ start_vnc_server() {
     log_message "Error: VNC server failed to start properly on port $CUSTOM_VNC_PORT."
     exit 1
 }
-
 
 # Check if a port is in use and kill the process using it
 kill_process_on_port() {

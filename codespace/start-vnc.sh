@@ -5,6 +5,48 @@ log_message() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
 }
 
+# Function to install pip3 if not installed
+install_pip3() {
+    if ! command -v pip3 &> /dev/null; then
+        log_message "pip3 not found, installing pip3..."
+        sudo apt update
+        sudo apt install -y python3-pip || {
+            log_message "Error: Failed to install pip3"
+            exit 1
+        }
+        log_message "pip3 installed successfully."
+    else
+        log_message "pip3 already installed."
+    fi
+}
+
+# Function to install noVNC, websockify, and Python websockify if missing
+install_novnc() {
+    if ! command -v websockify &> /dev/null; then
+        log_message "websockify not found, installing noVNC and websockify..."
+        sudo apt update
+        sudo apt install -y novnc websockify || {
+            log_message "Error: Failed to install noVNC and websockify"
+            exit 1
+        }
+        log_message "noVNC and websockify installed successfully."
+    else
+        log_message "websockify already installed."
+    fi
+
+    # Ensure the Python websockify module is installed
+    if ! python3 -c "import websockify" &> /dev/null; then
+        log_message "Python websockify module not found, installing..."
+        sudo pip3 install websockify || {
+            log_message "Error: Failed to install Python websockify module"
+            exit 1
+        }
+        log_message "Python websockify module installed successfully."
+    else
+        log_message "Python websockify module already installed."
+    fi
+}
+
 # Function to kill existing VNC server and remove lock files
 restart_vnc_server() {
     if pgrep Xvfb > /dev/null; then
@@ -29,15 +71,23 @@ ensure_permissions() {
 
 # Ensure noVNC utilities are correctly set up
 setup_novnc() {
-    # Ensure websockify is not a directory and is executable
-    if [ -d /opt/novnc/utils/websockify/websockify ]; then
-        log_message "Error: /opt/novnc/utils/websockify/websockify is a directory, not an executable."
+    # Find the correct path to websockify
+    WEBSOCKIFY_PATH=$(command -v websockify)
+    
+    if [ -z "$WEBSOCKIFY_PATH" ]; then
+        log_message "Error: websockify not found after installation. Exiting..."
         exit 1
-    elif [ ! -x /opt/novnc/utils/websockify/websockify ]; then
-        log_message "Making websockify executable..."
-        sudo chmod +x /opt/novnc/utils/websockify/websockify || log_message "Error: Could not make websockify executable"
     fi
-    sudo chown -R vscode:vscode /opt/novnc/utils || log_message "Error: Could not set ownership on /opt/novnc/utils"
+
+    log_message "Found websockify at $WEBSOCKIFY_PATH"
+
+    # Ensure websockify is executable
+    if [ ! -x "$WEBSOCKIFY_PATH" ]; then
+        log_message "Making websockify executable..."
+        sudo chmod +x "$WEBSOCKIFY_PATH" || log_message "Error: Could not make websockify executable"
+    fi
+
+    sudo chown -R vscode:vscode "$(dirname "$WEBSOCKIFY_PATH")" || log_message "Error: Could not set ownership on noVNC utils"
 }
 
 # Function to check if VNC server is running
@@ -50,6 +100,12 @@ check_vnc_server() {
         return 1
     fi
 }
+
+# Install pip3 if not already installed
+install_pip3
+
+# Install noVNC, websockify, and Python websockify module if not already installed
+install_novnc
 
 # Kill existing VNC server if running and remove lock files
 restart_vnc_server
@@ -69,7 +125,7 @@ sleep 5
 
 # Start noVNC server
 log_message "Starting noVNC server..."
-/opt/novnc/utils/websockify/websockify --web /opt/novnc/ 8080 localhost:5901 &
+$WEBSOCKIFY_PATH --web /opt/novnc/ 8080 localhost:5901 &
 
 # Check if VNC server is running
 if ! check_vnc_server; then

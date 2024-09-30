@@ -119,23 +119,22 @@ start_vnc_server() {
     Xvfb :${DISPLAY_NUMBER} -screen 0 1280x800x24 &
     
     # Wait for a longer time for the VNC server to initialize
-    sleep 10
+    sleep 15  # Increased sleep duration for better initialization
     
-    if pgrep Xvfb > /dev/null; then
-        log_message "VNC server started successfully on display :${DISPLAY_NUMBER} (port ${VNC_PORT})."
-    else
-        log_message "Error: VNC server failed to start."
-        exit 1
-    fi
-    
-    # Verify VNC is listening on the correct port
+    # Check if the VNC server is listening on the correct port in a loop
     log_message "Verifying if VNC is listening on port $VNC_PORT..."
-    if ! netstat -tuln | grep ":$VNC_PORT" > /dev/null; then
-        log_message "Error: VNC is not listening on port $VNC_PORT. Exiting..."
-        exit 1
-    else
-        log_message "VNC is confirmed to be listening on $VNC_PORT."
-    fi
+    for i in {1..5}; do  # Check for up to 5 times
+        if netstat -tuln | grep ":$VNC_PORT" > /dev/null; then
+            log_message "VNC is confirmed to be listening on $VNC_PORT."
+            return  # Exit the function if it is listening
+        else
+            log_message "VNC is not yet listening on $VNC_PORT. Retrying..."
+            sleep 3  # Wait before the next check
+        fi
+    done
+
+    log_message "Error: VNC server failed to start properly on port $VNC_PORT."
+    exit 1
 }
 
 # Check if a port is in use and kill the process using it

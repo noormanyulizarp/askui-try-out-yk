@@ -56,15 +56,19 @@ stop_vnc_server() {
     fi
     
     # Remove lock files if exist
-    if [ -f /tmp/.X1-lock ]; then
-        log_message "Removing VNC server lock file..."
-        rm -f /tmp/.X1-lock || log_message "Error: Could not remove /tmp/.X1-lock"
-    fi
+    for LOCK_FILE in /tmp/.X*-lock; do
+        if [ -f "$LOCK_FILE" ]; then
+            log_message "Removing VNC server lock file: $LOCK_FILE..."
+            rm -f "$LOCK_FILE" || log_message "Error: Could not remove $LOCK_FILE"
+        fi
+    done
 
-    if [ -f /tmp/.X11-unix/X1 ]; then
-        log_message "Removing stale X1 socket file..."
-        rm -f /tmp/.X11-unix/X1 || log_message "Error: Could not remove /tmp/.X11-unix/X1"
-    fi
+    for SOCKET_FILE in /tmp/.X11-unix/X*; do
+        if [ -f "$SOCKET_FILE" ]; then
+            log_message "Removing stale X socket file: $SOCKET_FILE..."
+            rm -f "$SOCKET_FILE" || log_message "Error: Could not remove $SOCKET_FILE"
+        fi
+    done
 
     log_message "VNC server stopped and cleaned up."
 }
@@ -110,14 +114,15 @@ start_vnc_server() {
         ((DISPLAY_NUMBER++))
     done
     
-    log_message "Starting VNC server on display :${DISPLAY_NUMBER}..."
+    VNC_PORT=$((5900 + DISPLAY_NUMBER))  # Dynamically assign port based on display number
+    log_message "Starting VNC server on display :${DISPLAY_NUMBER} (port ${VNC_PORT})..."
     Xvfb :${DISPLAY_NUMBER} -screen 0 1280x800x24 &
     
     # Wait a few seconds for VNC server to initialize
     sleep 5
     
     if pgrep Xvfb > /dev/null; then
-        log_message "VNC server started successfully on display :${DISPLAY_NUMBER}."
+        log_message "VNC server started successfully on display :${DISPLAY_NUMBER} (port ${VNC_PORT})."
     else
         log_message "Error: VNC server failed to start."
         exit 1
@@ -139,14 +144,14 @@ kill_process_on_port() {
     fi
 }
 
-# Function to check if VNC server is running on port 5901
+# Function to check if VNC server is running on the correct port
 check_vnc_port() {
-    log_message "Checking if VNC server is running on port 5901..."
-    if ! netstat -tuln | grep ":5901" > /dev/null; then
-        log_message "Error: VNC server is not running on port 5901. Trying to start VNC server again."
+    log_message "Checking if VNC server is running on port $VNC_PORT..."
+    if ! netstat -tuln | grep ":$VNC_PORT" > /dev/null; then
+        log_message "Error: VNC server is not running on port $VNC_PORT. Trying to start VNC server again."
         start_vnc_server
     else
-        log_message "VNC server is listening on port 5901."
+        log_message "VNC server is listening on port $VNC_PORT."
     fi
 }
 
@@ -170,22 +175,22 @@ setup_novnc
 # Start the VNC server
 start_vnc_server
 
-# Check if VNC is running on port 5901
+# Check if VNC is running on the correct port
 check_vnc_port
 
 # Kill any process using port 8080
 kill_process_on_port 8080
 
-# Start noVNC server
+# Start noVNC server on the dynamic VNC port
 log_message "Starting noVNC server..."
-$WEBSOCKIFY_PATH --web /opt/novnc/ 8080 localhost:5901 &
+$WEBSOCKIFY_PATH --web /opt/novnc/ 8080 localhost:$VNC_PORT &
 
 # Check if the noVNC server can connect to the VNC server
 log_message "Waiting for noVNC to connect..."
 sleep 5
-if ! netstat -an | grep 5901 &> /dev/null; then
-    log_message "Error: noVNC could not connect to localhost:5901. Check if the VNC server is running on port 5901."
+if ! netstat -an | grep $VNC_PORT &> /dev/null; then
+    log_message "Error: noVNC could not connect to localhost:$VNC_PORT. Check if the VNC server is running on port $VNC_PORT."
     exit 1
 else
-    log_message "noVNC successfully connected to VNC server at localhost:5901."
+    log_message "noVNC successfully connected to VNC server at localhost:$VNC_PORT."
 fi

@@ -47,14 +47,26 @@ install_novnc() {
     fi
 }
 
-# Function to kill existing VNC server and remove lock files
-restart_vnc_server() {
+# Function to stop VNC server and clean lock files
+stop_vnc_server() {
     if pgrep Xvfb > /dev/null; then
-        log_message "VNC server already running, attempting to restart..."
-        pkill Xvfb
-        rm -f /tmp/.X1-lock
-        log_message "VNC server restarted successfully."
+        log_message "Stopping running VNC server..."
+        pkill Xvfb || log_message "Error: Failed to stop VNC server."
+        sleep 2  # Wait for processes to terminate
     fi
+    
+    # Remove lock files if exist
+    if [ -f /tmp/.X1-lock ]; then
+        log_message "Removing VNC server lock file..."
+        rm -f /tmp/.X1-lock || log_message "Error: Could not remove /tmp/.X1-lock"
+    fi
+
+    if [ -f /tmp/.X11-unix/X1 ]; then
+        log_message "Removing stale X1 socket file..."
+        rm -f /tmp/.X11-unix/X1 || log_message "Error: Could not remove /tmp/.X11-unix/X1"
+    fi
+
+    log_message "VNC server stopped and cleaned up."
 }
 
 # Ensure proper permissions on X11 files
@@ -90,16 +102,55 @@ setup_novnc() {
     sudo chown -R vscode:vscode "$(dirname "$WEBSOCKIFY_PATH")" || log_message "Error: Could not set ownership on noVNC utils"
 }
 
-# Function to check if VNC server is running
-check_vnc_server() {
+# Start the VNC server on a free display
+start_vnc_server() {
+    DISPLAY_NUMBER=1
+    while [ -f /tmp/.X${DISPLAY_NUMBER}-lock ]; do
+        log_message "Display :${DISPLAY_NUMBER} is in use. Trying next display..."
+        ((DISPLAY_NUMBER++))
+    done
+    
+    log_message "Starting VNC server on display :${DISPLAY_NUMBER}..."
+    Xvfb :${DISPLAY_NUMBER} -screen 0 1280x800x24 &
+    
+    # Wait a few seconds for VNC server to initialize
+    sleep 5
+    
     if pgrep Xvfb > /dev/null; then
-        log_message "VNC server is running."
-        return 0
+        log_message "VNC server started successfully on display :${DISPLAY_NUMBER}."
     else
-        log_message "VNC server is not running."
-        return 1
+        log_message "Error: VNC server failed to start."
+        exit 1
     fi
 }
+
+# Check if a port is in use and kill the process using it
+kill_process_on_port() {
+    local PORT=$1
+    if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null ; then
+        log_message "Port $PORT is in use, killing the process..."
+        fuser -k $PORT/tcp || {
+            log_message "Error: Failed to kill process on port $PORT"
+            exit 1
+        }
+        log_message "Process on port $PORT killed successfully."
+    else
+        log_message "Port $PORT is free."
+    fi
+}
+
+# Function to check if VNC server is running on port 5901
+check_vnc_port() {
+    log_message "Checking if VNC server is running on port 5901..."
+    if ! netstat -tuln | grep ":5901" > /dev/null; then
+        log_message "Error: VNC server is not running on port 5901. Trying to start VNC server again."
+        start_vnc_server
+    else
+        log_message "VNC server is listening on port 5901."
+    fi
+}
+
+# Main Script Execution
 
 # Install pip3 if not already installed
 install_pip3
@@ -107,8 +158,8 @@ install_pip3
 # Install noVNC, websockify, and Python websockify module if not already installed
 install_novnc
 
-# Kill existing VNC server if running and remove lock files
-restart_vnc_server
+# Stop any existing VNC server and clean lock files
+stop_vnc_server
 
 # Ensure proper permissions
 ensure_permissions
@@ -116,21 +167,25 @@ ensure_permissions
 # Ensure noVNC utilities are correctly set up
 setup_novnc
 
-# Start VNC server on display :1 with Xvfb
-log_message "Starting VNC server..."
-Xvfb :1 -screen 0 1280x800x24 &
+# Start the VNC server
+start_vnc_server
 
-# Wait for VNC server to start
-sleep 5
+# Check if VNC is running on port 5901
+check_vnc_port
+
+# Kill any process using port 8080
+kill_process_on_port 8080
 
 # Start noVNC server
 log_message "Starting noVNC server..."
 $WEBSOCKIFY_PATH --web /opt/novnc/ 8080 localhost:5901 &
 
-# Check if VNC server is running
-if ! check_vnc_server; then
-    log_message "Error: VNC server failed to start."
+# Check if the noVNC server can connect to the VNC server
+log_message "Waiting for noVNC to connect..."
+sleep 5
+if ! netstat -an | grep 5901 &> /dev/null; then
+    log_message "Error: noVNC could not connect to localhost:5901. Check if the VNC server is running on port 5901."
     exit 1
+else
+    log_message "noVNC successfully connected to VNC server at localhost:5901."
 fi
-
-log_message "VNC server started successfully."

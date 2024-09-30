@@ -23,7 +23,7 @@ ensure_permissions() {
             sudo chown root:root /tmp/.X11-unix || log_message "Error: Could not change ownership of /tmp/.X11-unix"
         fi
         # Set the correct permissions
-        chmod 1777 /tmp/.X11-unix || log_message "Error: Could not set permissions on /tmp/.X11-unix"
+        sudo chmod 1777 /tmp/.X11-unix || log_message "Error: Could not set permissions on /tmp/.X11-unix"
     fi
 }
 
@@ -34,10 +34,10 @@ setup_novnc() {
         log_message "Error: /opt/novnc/utils/websockify/websockify is a directory, not an executable."
         exit 1
     elif [ ! -x /opt/novnc/utils/websockify/websockify ]; then
-        log_message "Error: /opt/novnc/utils/websockify/websockify is not executable."
-        exit 1
+        log_message "Making websockify executable..."
+        sudo chmod +x /opt/novnc/utils/websockify/websockify || log_message "Error: Could not make websockify executable"
     fi
-    chown -R vscode:vscode /opt/novnc/utils || log_message "Error: Could not set ownership on /opt/novnc/utils"
+    sudo chown -R vscode:vscode /opt/novnc/utils || log_message "Error: Could not set ownership on /opt/novnc/utils"
 }
 
 # Function to check if VNC server is running

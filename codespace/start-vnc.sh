@@ -54,7 +54,7 @@ stop_vnc_server() {
         pkill Xvfb || log_message "Error: Failed to stop VNC server."
         sleep 2  # Wait for processes to terminate
     fi
-    
+
     # Remove lock files if exist
     for LOCK_FILE in /tmp/.X*-lock; do
         if [ -f "$LOCK_FILE" ]; then
@@ -89,7 +89,7 @@ ensure_permissions() {
 setup_novnc() {
     # Find the correct path to websockify
     WEBSOCKIFY_PATH=$(command -v websockify)
-    
+
     if [ -z "$WEBSOCKIFY_PATH" ]; then
         log_message "Error: websockify not found after installation. Exiting..."
         exit 1
@@ -108,7 +108,6 @@ setup_novnc() {
 
 # Start the VNC server on a free display
 start_vnc_server() {
-    # Allow setting a custom display number and port if desired
     CUSTOM_DISPLAY_NUMBER=${1:-1}  # Default to 1 if not provided
     CUSTOM_VNC_PORT=$((5900 + CUSTOM_DISPLAY_NUMBER))  # Calculate port based on display number
 
@@ -118,13 +117,15 @@ start_vnc_server() {
         ((CUSTOM_DISPLAY_NUMBER++))
         CUSTOM_VNC_PORT=$((5900 + CUSTOM_DISPLAY_NUMBER))  # Update the port
     done
-    
+
     log_message "Starting VNC server on display :${CUSTOM_DISPLAY_NUMBER} (port ${CUSTOM_VNC_PORT})..."
-    Xvfb :${CUSTOM_DISPLAY_NUMBER} -screen 0 1280x800x24 > /var/log/xvfb.log 2>&1 &
+    
+    # Use /tmp/xvfb.log instead of /var/log/xvfb.log
+    Xvfb :${CUSTOM_DISPLAY_NUMBER} -screen 0 1280x800x24 > /tmp/xvfb.log 2>&1 &
 
     # Wait for a longer time for the VNC server to initialize
     sleep 20  # Increased sleep duration for better initialization
-    
+
     # Check if the VNC server is listening on the correct port in a loop
     log_message "Verifying if VNC is listening on port $CUSTOM_VNC_PORT..."
     for i in {1..5}; do  # Check for up to 5 times

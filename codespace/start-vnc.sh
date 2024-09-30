@@ -108,34 +108,39 @@ setup_novnc() {
 
 # Start the VNC server on a free display
 start_vnc_server() {
-    DISPLAY_NUMBER=1
-    while [ -f /tmp/.X${DISPLAY_NUMBER}-lock ]; do
-        log_message "Display :${DISPLAY_NUMBER} is in use. Trying next display..."
-        ((DISPLAY_NUMBER++))
+    # Allow setting a custom display number and port if desired
+    CUSTOM_DISPLAY_NUMBER=${1:-1}  # Default to 1 if not provided
+    CUSTOM_VNC_PORT=$((5900 + CUSTOM_DISPLAY_NUMBER))  # Calculate port based on display number
+
+    # Check if the specified display number is in use
+    while [ -f /tmp/.X${CUSTOM_DISPLAY_NUMBER}-lock ]; do
+        log_message "Display :${CUSTOM_DISPLAY_NUMBER} is in use. Trying next display..."
+        ((CUSTOM_DISPLAY_NUMBER++))
+        CUSTOM_VNC_PORT=$((5900 + CUSTOM_DISPLAY_NUMBER))  # Update the port
     done
     
-    VNC_PORT=$((5900 + DISPLAY_NUMBER))  # Dynamically assign port based on display number
-    log_message "Starting VNC server on display :${DISPLAY_NUMBER} (port ${VNC_PORT})..."
-    Xvfb :${DISPLAY_NUMBER} -screen 0 1280x800x24 &
+    log_message "Starting VNC server on display :${CUSTOM_DISPLAY_NUMBER} (port ${CUSTOM_VNC_PORT})..."
+    Xvfb :${CUSTOM_DISPLAY_NUMBER} -screen 0 1280x800x24 &
     
     # Wait for a longer time for the VNC server to initialize
     sleep 15  # Increased sleep duration for better initialization
     
     # Check if the VNC server is listening on the correct port in a loop
-    log_message "Verifying if VNC is listening on port $VNC_PORT..."
+    log_message "Verifying if VNC is listening on port $CUSTOM_VNC_PORT..."
     for i in {1..5}; do  # Check for up to 5 times
-        if netstat -tuln | grep ":$VNC_PORT" > /dev/null; then
-            log_message "VNC is confirmed to be listening on $VNC_PORT."
+        if netstat -tuln | grep ":$CUSTOM_VNC_PORT" > /dev/null; then
+            log_message "VNC is confirmed to be listening on $CUSTOM_VNC_PORT."
             return  # Exit the function if it is listening
         else
-            log_message "VNC is not yet listening on $VNC_PORT. Retrying..."
+            log_message "VNC is not yet listening on $CUSTOM_VNC_PORT. Retrying..."
             sleep 3  # Wait before the next check
         fi
     done
 
-    log_message "Error: VNC server failed to start properly on port $VNC_PORT."
+    log_message "Error: VNC server failed to start properly on port $CUSTOM_VNC_PORT."
     exit 1
 }
+
 
 # Check if a port is in use and kill the process using it
 kill_process_on_port() {

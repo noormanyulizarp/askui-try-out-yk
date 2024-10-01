@@ -41,7 +41,7 @@ start_vnc_server() {
     log_message "Starting VNC server on display :${DISPLAY_NUMBER} (port ${VNC_PORT})..."
     Xvfb :${DISPLAY_NUMBER} -screen 0 1280x800x24 > /tmp/xvfb.log 2>&1 &
 
-    sleep 20  # Ensure Xvfb has time to start
+    sleep 30  # Increased sleep time to ensure Xvfb has time to start
     log_message "VNC server started on display :${DISPLAY_NUMBER}."
 }
 

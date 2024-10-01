@@ -15,7 +15,7 @@
         }
     },
     "remoteUser": "vscode",
-    "forwardPorts": [5901, 8080],
+    "forwardPorts": [],
     "containerEnv": {
         "MEGA_EMAIL": "${MEGA_EMAIL}",
         "MEGA_PASSWORD": "${MEGA_PASSWORD}"

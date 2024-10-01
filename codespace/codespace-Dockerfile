@@ -18,7 +18,6 @@ RUN apt-get update && \
     libfuse2 fuse libatk-bridge2.0-0 libcups2 libdrm2 libgtk-3-0 \
     libgbm1 libc-ares2 libmediainfo0v5 libzen0v5 libpcrecpp0v5 \
     wget git zsh \
-    tightvncserver x11vnc xvfb \
     xfce4 xfce4-goodies chromium-browser \
     nautilus sudo \
     && apt-get clean && \
@@ -35,7 +34,6 @@ RUN mkdir -p /opt/novnc && \
     wget -qO- https://github.com/novnc/noVNC/archive/refs/heads/master.tar.gz | tar xz --strip-components=1 -C /opt/novnc && \
     mkdir -p /opt/novnc/utils/websockify && \
     wget -qO- https://github.com/novnc/websockify/archive/refs/heads/master.tar.gz | tar xz --strip-components=1 -C /opt/novnc/utils/websockify && \
-    # Pastikan /opt/novnc/utils/websockify/websockify bukan direktori
     if [ -d "/opt/novnc/utils/websockify/websockify" ]; then \
         mv /opt/novnc/utils/websockify/websockify/* /opt/novnc/utils/websockify/ && \
         rmdir /opt/novnc/utils/websockify/websockify; \
@@ -75,11 +73,6 @@ COPY start.sh /home/vscode/
 # Ensure scripts are executable and owned by vscode user
 RUN chmod +x /home/vscode/*.sh && \
     chown vscode:vscode /home/vscode/*.sh
-
-# Set up VNC password
-RUN mkdir -p /home/vscode/.vnc && \
-    echo "password" | vncpasswd -f > /home/vscode/.vnc/passwd && \
-    chmod 600 /home/vscode/.vnc/passwd
 
 # Set default command
 CMD ["/home/vscode/start.sh"]

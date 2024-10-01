@@ -20,31 +20,15 @@ install_pip3() {
     fi
 }
 
-# Function to install noVNC, websockify, and Python websockify if missing
+# Function to install noVNC and websockify if missing
 install_novnc() {
-    if ! command -v websockify &> /dev/null; then
-        log_message "websockify not found, installing noVNC and websockify..."
-        sudo apt update
-        sudo apt install -y novnc websockify || {
-            log_message "Error: Failed to install noVNC and websockify"
-            exit 1
-        }
-        log_message "noVNC and websockify installed successfully."
-    else
-        log_message "websockify already installed."
-    fi
-
-    # Ensure the Python websockify module is installed
-    if ! python3 -c "import websockify" &> /dev/null; then
-        log_message "Python websockify module not found, installing..."
-        sudo pip3 install websockify || {
-            log_message "Error: Failed to install Python websockify module"
-            exit 1
-        }
-        log_message "Python websockify module installed successfully."
-    else
-        log_message "Python websockify module already installed."
-    fi
+    log_message "Installing noVNC and websockify..."
+    sudo apt update
+    sudo apt install -y novnc websockify || {
+        log_message "Error: Failed to install noVNC and websockify"
+        exit 1
+    }
+    log_message "noVNC and websockify installed successfully."
 }
 
 # Function to stop VNC server and clean lock files
@@ -55,7 +39,7 @@ stop_vnc_server() {
         sleep 2  # Wait for processes to terminate
     fi
 
-    # Remove lock files if exist
+    # Remove lock files if they exist
     for LOCK_FILE in /tmp/.X*-lock; do
         if [ -f "$LOCK_FILE" ]; then
             log_message "Removing VNC server lock file: $LOCK_FILE..."
@@ -85,27 +69,6 @@ ensure_permissions() {
     fi
 }
 
-# Ensure noVNC utilities are correctly set up
-setup_novnc() {
-    # Find the correct path to websockify
-    WEBSOCKIFY_PATH=$(command -v websockify)
-
-    if [ -z "$WEBSOCKIFY_PATH" ]; then
-        log_message "Error: websockify not found after installation. Exiting..."
-        exit 1
-    fi
-
-    log_message "Found websockify at $WEBSOCKIFY_PATH"
-
-    # Ensure websockify is executable
-    if [ ! -x "$WEBSOCKIFY_PATH" ]; then
-        log_message "Making websockify executable..."
-        sudo chmod +x "$WEBSOCKIFY_PATH" || log_message "Error: Could not make websockify executable"
-    fi
-
-    sudo chown -R vscode:vscode "$(dirname "$WEBSOCKIFY_PATH")" || log_message "Error: Could not set ownership on noVNC utils"
-}
-
 # Start the VNC server on a free display
 start_vnc_server() {
     CUSTOM_DISPLAY_NUMBER=${1:-1}  # Default to 1 if not provided
@@ -120,41 +83,13 @@ start_vnc_server() {
 
     log_message "Starting VNC server on display :${CUSTOM_DISPLAY_NUMBER} (port ${CUSTOM_VNC_PORT})..."
     
-    # Use /tmp/xvfb.log instead of /var/log/xvfb.log
+    # Start the Xvfb server
     Xvfb :${CUSTOM_DISPLAY_NUMBER} -screen 0 1280x800x24 > /tmp/xvfb.log 2>&1 &
 
     # Wait for a longer time for the VNC server to initialize
     sleep 20  # Increased sleep duration for better initialization
 
-    # Check if the VNC server is listening on the correct port in a loop
-    log_message "Verifying if VNC is listening on port $CUSTOM_VNC_PORT..."
-    for i in {1..5}; do  # Check for up to 5 times
-        if netstat -tuln | grep ":$CUSTOM_VNC_PORT" > /dev/null; then
-            log_message "VNC is confirmed to be listening on $CUSTOM_VNC_PORT."
-            return  # Exit the function if it is listening
-        else
-            log_message "VNC is not yet listening on $CUSTOM_VNC_PORT. Retrying..."
-            sleep 3  # Wait before the next check
-        fi
-    done
-
-    log_message "Error: VNC server failed to start properly on port $CUSTOM_VNC_PORT."
-    exit 1
-}
-
-# Check if a port is in use and kill the process using it
-kill_process_on_port() {
-    local PORT=$1
-    if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null ; then
-        log_message "Port $PORT is in use, killing the process..."
-        fuser -k $PORT/tcp || {
-            log_message "Error: Failed to kill process on port $PORT"
-            exit 1
-        }
-        log_message "Process on port $PORT killed successfully."
-    else
-        log_message "Port $PORT is free."
-    fi
+    log_message "VNC server started on display :${CUSTOM_DISPLAY_NUMBER}."
 }
 
 # Find a free port dynamically
@@ -168,23 +103,12 @@ find_free_port() {
     echo "$PORT"
 }
 
-# Function to check if VNC server is running on the correct port
-check_vnc_port() {
-    log_message "Checking if VNC server is running on port $VNC_PORT..."
-    if ! netstat -tuln | grep ":$VNC_PORT" > /dev/null; then
-        log_message "Error: VNC server is not running on port $VNC_PORT. Trying to start VNC server again."
-        start_vnc_server
-    else
-        log_message "VNC server is listening on port $VNC_PORT."
-    fi
-}
-
 # Main Script Execution
 
 # Install pip3 if not already installed
 install_pip3
 
-# Install noVNC, websockify, and Python websockify module if not already installed
+# Install noVNC and websockify if not already installed
 install_novnc
 
 # Stop any existing VNC server and clean lock files
@@ -193,29 +117,23 @@ stop_vnc_server
 # Ensure proper permissions
 ensure_permissions
 
-# Ensure noVNC utilities are correctly set up
-setup_novnc
-
 # Start the VNC server
 start_vnc_server
-
-# Check if VNC is running on the correct port
-check_vnc_port
 
 # Find a free port for noVNC dynamically
 NOVNC_PORT=$(find_free_port)
 
 # Start noVNC server on the dynamic VNC port
 log_message "Starting noVNC server on port $NOVNC_PORT..."
-$WEBSOCKIFY_PATH --web /opt/novnc/ $NOVNC_PORT localhost:$VNC_PORT &
+websockify --web /opt/novnc/ $NOVNC_PORT localhost:$((5900 + 1)) &
 
 # Check if the noVNC server can connect to the VNC server
 log_message "Waiting for noVNC to connect..."
 sleep 10  # Increased wait time for connection
 
-if ! netstat -an | grep $VNC_PORT &> /dev/null; then
-    log_message "Error: noVNC could not connect to localhost:$VNC_PORT. Check if the VNC server is running on port $VNC_PORT."
+if ! netstat -an | grep "5901" &> /dev/null; then
+    log_message "Error: noVNC could not connect to localhost:5901. Check if the VNC server is running on port 5901."
     exit 1
 else
-    log_message "noVNC successfully connected to VNC server at localhost:$VNC_PORT on port $NOVNC_PORT."
+    log_message "noVNC successfully connected to VNC server at localhost:5901 on port $NOVNC_PORT."
 fi

@@ -6,10 +6,11 @@ USER root
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PATH="/usr/local/bin:${PATH}"
 
 # Install necessary packages and dependencies
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -yq \
+    apt-get install -yq --no-install-recommends \
     xfce4 xfce4-goodies \
     chromium-browser \
     nautilus \
@@ -20,41 +21,39 @@ RUN apt-get update && \
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Install MEGA CMD with dynamic availability check
-RUN OS_VERSION=$(lsb_release -rs) && \
-    MEGA_URL="https://mega.nz/linux/repo/xUbuntu_${OS_VERSION}/amd64/megacmd-xUbuntu_${OS_VERSION}_amd64.deb" && \
-    wget --spider "$MEGA_URL" && \
-    if [ $? -eq 0 ]; then \
-        wget "$MEGA_URL" -O /tmp/megacmd.deb && \
-        dpkg -i /tmp/megacmd.deb || apt-get install -f -y && dpkg -i /tmp/megacmd.deb && \
+# Function to install MEGA CMD based on the available repo
+RUN install_mega_cmd() { \
+    OS_VERSION=$(lsb_release -rs); \
+    DISTRO=$(lsb_release -si); \
+    MEGA_REPO_URL="https://mega.nz/linux/repo/xUbuntu_${OS_VERSION}/amd64/"; \
+    if wget --spider "${MEGA_REPO_URL}" 2>/dev/null; then \
+        MEGA_CMD_PKG="megacmd-xUbuntu_${OS_VERSION}_amd64.deb"; \
+        wget "${MEGA_REPO_URL}${MEGA_CMD_PKG}" -O /tmp/megacmd.deb && \
+        dpkg -i /tmp/megacmd.deb || { apt-get update && apt-get install -f -y && dpkg -i /tmp/megacmd.deb; }; \
         rm /tmp/megacmd.deb && \
         mega-cmd --version || { echo "MEGA CMD installation failed"; exit 1; }; \
     else \
-        echo "MEGA CMD is not available for this OS version: ${OS_VERSION}"; \
-        exit 1; \
-    fi
+        echo "MEGA CMD is not available for this OS version: ${OS_VERSION}" && \
+        echo "Continuing without MEGA CMD installation"; \
+    fi; \
+}
 
-# Ensure /usr/local/bin is in PATH
-ENV PATH="/usr/local/bin:${PATH}"
+# Install MEGA CMD
+RUN install_mega_cmd
 
 # Install Oh My Zsh and necessary plugins
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \
-    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting && \
-    git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM}/plugins/zsh-autosuggestions && \
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting && \
+    git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions && \
     sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/' ~/.zshrc && \
-    sed -i '/^plugins=(git)/d' ~/.zshrc && \
-    echo 'plugins=(git zsh-syntax-highlighting zsh-autosuggestions)' >> ~/.zshrc && \
+    sed -i 's/plugins=(git)/plugins=(git zsh-syntax-highlighting zsh-autosuggestions)/' ~/.zshrc && \
     echo 'alias gst="git status"' >> ~/.zshrc && \
     echo 'alias ll="ls -la"' >> ~/.zshrc && \
     echo 'POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(user dir vcs)' > ~/.p10k.zsh && \
     echo 'POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status root_indicator background_jobs)' >> ~/.p10k.zsh
 
 # Copy and configure scripts
-COPY mount-cloud-storage.sh /home/vscode/
-COPY start-vnc.sh /home/vscode/
-COPY start.sh /home/vscode/
-
-# Ensure scripts are executable and owned by vscode user
+COPY scripts/*.sh /home/vscode/
 RUN chmod +x /home/vscode/*.sh && \
     chown vscode:vscode /home/vscode/*.sh
 

@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  base:
+    build:
+      context: .
+      dockerfile: Dockerfile.base
+
+  mega:
+    build:
+      context: .
+      dockerfile: Dockerfile.mega
+    depends_on:
+      - base
+
+  zsh:
+    build:
+      context: .
+      dockerfile: Dockerfile.zsh
+    depends_on:
+      - base
+
+  final:
+    build:
+      context: .
+      dockerfile: Dockerfile.final
+    depends_on:
+      - base
+      - mega
+      - zsh

@@ -1,9 +1,8 @@
 {
     "name": "Codespace Development Environment",
-    "build": {
-        "dockerfile": "../codespace/codespace-Dockerfile",
-        "context": "../codespace"
-    },
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "final",
+    "workspaceFolder": "/workspace",
     "customizations": {
         "vscode": {
             "extensions": [
@@ -11,7 +10,10 @@
                 "ms-vscode.vscode-typescript-tslint-plugin",
                 "dbaeumer.vscode-eslint",
                 "esbenp.prettier-vscode"
-            ]
+            ],
+            "settings": {
+                "terminal.integrated.shell.linux": "/bin/zsh"
+            }
         }
     },
     "remoteUser": "vscode",

@@ -1,0 +1,44 @@
+# Base image
+FROM mcr.microsoft.com/vscode/devcontainers/base:ubuntu-22.04
+
+# Use root for installation
+USER root
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PATH="/usr/local/bin:${PATH}"
+
+# Install necessary packages and dependencies
+RUN apt-get update && \
+    apt-get install -yq --no-install-recommends \
+    xfce4 \
+    xfce4-goodies \
+    chromium-browser \
+    nautilus \
+    sudo \
+    xvfb \
+    x11vnc \
+    tightvncserver \
+    tigervnc-standalone-server \
+    lsof \
+    curl \
+    git \
+    zsh \
+    novnc \
+    websockify \
+    wget \
+    lsb-release \
+    gnupg2 \
+    apt-transport-https \
+    ca-certificates \
+    software-properties-common \
+    libpcrecpp0v5 \
+    libzen0v5 \
+    dbus-x11 \
+    xfonts-base \
+    xfonts-100dpi \
+    xfonts-75dpi \
+    xfonts-cyrillic \
+    x11-xserver-utils && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*

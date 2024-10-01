@@ -79,14 +79,10 @@ RUN mkdir -p /opt/novnc && \
     git clone https://github.com/novnc/websockify /opt/novnc/utils/websockify
 
 # Copy the VNC, Cloud Storage, and start scripts into the container
-COPY start-vnc.sh /codespace/start-vnc.sh
-COPY start-tigervnc.sh /codespace/start-tigervnc.sh
-COPY start-tightvnc.sh /codespace/start-tightvnc.sh
-COPY mount-cloud-storage.sh /codespace/mount-cloud-storage.sh
-COPY start.sh /codespace/start.sh
+COPY *.sh /codespace/
 
 # Make scripts executable
-RUN chmod +x /codespace/start-vnc.sh /codespace/start-tigervnc.sh /codespace/start-tightvnc.sh /codespace/mount-cloud-storage.sh /codespace/start.sh
+RUN find /codespace -name "*.sh" -exec chmod +x {} \;
 
 # Set up VNC password for x11vnc
 RUN mkdir -p /root/.vnc && \

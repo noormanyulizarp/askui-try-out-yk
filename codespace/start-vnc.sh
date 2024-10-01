@@ -61,7 +61,7 @@ check_and_restart_vnc() {
 start_novnc() {
     NOVNC_PORT=$(find_free_port)
     log_message "Starting noVNC on port $NOVNC_PORT..."
-    websockify --web /opt/novnc/ $NOVNC_PORT localhost:$((5900 + 1)) &
+    /opt/novnc/utils/novnc_proxy --vnc localhost:$((5900 + 1)) --listen $NOVNC_PORT &
 
     sleep 10
     log_message "noVNC started and connected on port $NOVNC_PORT."
@@ -82,3 +82,6 @@ ensure_permissions
 start_vnc_server
 check_and_restart_vnc
 start_novnc
+
+# Keep the script running
+tail -f /dev/null

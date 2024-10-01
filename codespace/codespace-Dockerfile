@@ -64,7 +64,12 @@ RUN if [ ! -d "$HOME/.oh-my-zsh" ]; then \
     echo 'POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(user dir vcs)' > ~/.p10k.zsh && \
     echo 'POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status root_indicator background_jobs)' >> ~/.p10k.zsh
 
-# Copy the VNC, Cloud Storage, and start scripts into the container
+# Install noVNC
+RUN mkdir -p /opt/novnc && \
+    git clone https://github.com/novnc/noVNC.git /opt/novnc && \
+    git clone https://github.com/novnc/websockify /opt/novnc/utils/websockify
+
+    # Copy the VNC, Cloud Storage, and start scripts into the container
 COPY start-vnc.sh /codespace/start-vnc.sh
 COPY mount-cloud-storage.sh /codespace/mount-cloud-storage.sh
 COPY start.sh /codespace/start.sh

@@ -11,21 +11,33 @@ ENV PATH="/usr/local/bin:${PATH}"
 # Install necessary packages and dependencies
 RUN apt-get update && \
     apt-get install -yq --no-install-recommends \
-    xfce4 xfce4-goodies \
+    xfce4 \
+    xfce4-goodies \
     chromium-browser \
     nautilus \
     sudo \
-    xvfb lsof curl git zsh novnc websockify \
-    wget lsb-release gnupg2 apt-transport-https ca-certificates software-properties-common \
-    libpcrecpp0v5 libzen0v5 \
-    && apt-get clean && \
+    xvfb \
+    lsof \
+    curl \
+    git \
+    zsh \
+    novnc \
+    websockify \
+    wget \
+    lsb-release \
+    gnupg2 \
+    apt-transport-https \
+    ca-certificates \
+    software-properties-common \
+    libpcrecpp0v5 \
+    libzen0v5 && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Function to install MEGA CMD based on the available repo
-RUN install_mega_cmd() { \
-    OS_VERSION=$(lsb_release -rs); \
-    DISTRO=$(lsb_release -si); \
-    MEGA_REPO_URL="https://mega.nz/linux/repo/xUbuntu_${OS_VERSION}/amd64/"; \
+# Install MEGA CMD
+RUN OS_VERSION=$(lsb_release -rs) && \
+    DISTRO=$(lsb_release -si) && \
+    MEGA_REPO_URL="https://mega.nz/linux/repo/xUbuntu_${OS_VERSION}/amd64/" && \
     if wget --spider "${MEGA_REPO_URL}" 2>/dev/null; then \
         MEGA_CMD_PKG="megacmd-xUbuntu_${OS_VERSION}_amd64.deb"; \
         wget "${MEGA_REPO_URL}${MEGA_CMD_PKG}" -O /tmp/megacmd.deb && \
@@ -35,11 +47,9 @@ RUN install_mega_cmd() { \
     else \
         echo "MEGA CMD is not available for this OS version: ${OS_VERSION}" && \
         echo "Continuing without MEGA CMD installation"; \
-    fi; \
-}
-
-# Install MEGA CMD
-RUN install_mega_cmd
+    fi && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Oh My Zsh and necessary plugins
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \
@@ -57,5 +67,5 @@ COPY scripts/*.sh /home/vscode/
 RUN chmod +x /home/vscode/*.sh && \
     chown vscode:vscode /home/vscode/*.sh
 
-# Set default command
+# Set the default command
 CMD ["/home/vscode/start.sh"]

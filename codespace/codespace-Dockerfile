@@ -17,6 +17,7 @@ RUN apt-get update && \
     nautilus \
     sudo \
     xvfb \
+    x11vnc \
     lsof \
     curl \
     git \
@@ -30,7 +31,13 @@ RUN apt-get update && \
     ca-certificates \
     software-properties-common \
     libpcrecpp0v5 \
-    libzen0v5 && \
+    libzen0v5 \
+    dbus-x11 \
+    xfonts-base \
+    xfonts-100dpi \
+    xfonts-75dpi \
+    xfonts-cyrillic \
+    x11-xserver-utils && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -69,13 +76,17 @@ RUN mkdir -p /opt/novnc && \
     git clone https://github.com/novnc/noVNC.git /opt/novnc && \
     git clone https://github.com/novnc/websockify /opt/novnc/utils/websockify
 
-    # Copy the VNC, Cloud Storage, and start scripts into the container
+# Copy the VNC, Cloud Storage, and start scripts into the container
 COPY start-vnc.sh /codespace/start-vnc.sh
 COPY mount-cloud-storage.sh /codespace/mount-cloud-storage.sh
 COPY start.sh /codespace/start.sh
 
 # Make scripts executable
 RUN chmod +x /codespace/start-vnc.sh /codespace/mount-cloud-storage.sh /codespace/start.sh
+
+# Set up VNC password
+RUN mkdir -p /root/.vnc && \
+    x11vnc -storepasswd 1234 /root/.vnc/passwd
 
 # Set the default command
 CMD ["/bin/zsh"]

@@ -18,6 +18,8 @@ RUN apt-get update && \
     sudo \
     xvfb \
     x11vnc \
+    tightvncserver \
+    tigervnc-standalone-server \
     lsof \
     curl \
     git \
@@ -78,13 +80,15 @@ RUN mkdir -p /opt/novnc && \
 
 # Copy the VNC, Cloud Storage, and start scripts into the container
 COPY start-vnc.sh /codespace/start-vnc.sh
+COPY start-tigervnc.sh /codespace/start-tigervnc.sh
+COPY start-tightvnc.sh /codespace/start-tightvnc.sh
 COPY mount-cloud-storage.sh /codespace/mount-cloud-storage.sh
 COPY start.sh /codespace/start.sh
 
 # Make scripts executable
-RUN chmod +x /codespace/start-vnc.sh /codespace/mount-cloud-storage.sh /codespace/start.sh
+RUN chmod +x /codespace/start-vnc.sh /codespace/start-tigervnc.sh /codespace/start-tightvnc.sh /codespace/mount-cloud-storage.sh /codespace/start.sh
 
-# Set up VNC password
+# Set up VNC password for x11vnc
 RUN mkdir -p /root/.vnc && \
     x11vnc -storepasswd 1234 /root/.vnc/passwd
 

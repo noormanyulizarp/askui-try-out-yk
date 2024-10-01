@@ -8,10 +8,42 @@ USER root
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/usr/local/bin:${PATH}"
 
-# Ensure necessary packages are installed (these should already be in the base image)
-# If additional packages are needed, you can install them here
+# Install necessary packages and dependencies
+RUN apt-get update && \
+    apt-get install -yq --no-install-recommends \
+    xfce4 \
+    xfce4-goodies \
+    chromium-browser \
+    nautilus \
+    sudo \
+    xvfb \
+    x11vnc \
+    tightvncserver \
+    tigervnc-standalone-server \
+    lsof \
+    curl \
+    git \
+    zsh \
+    novnc \
+    websockify \
+    wget \
+    lsb-release \
+    gnupg2 \
+    apt-transport-https \
+    ca-certificates \
+    software-properties-common \
+    libpcrecpp0v5 \
+    libzen0v5 \
+    dbus-x11 \
+    xfonts-base \
+    xfonts-100dpi \
+    xfonts-75dpi \
+    xfonts-cyrillic \
+    x11-xserver-utils && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install noVNC and websockify if they aren't installed in the base image
+# Install noVNC if it's not installed in the base image
 RUN mkdir -p /opt/novnc && \
     git clone https://github.com/novnc/noVNC.git /opt/novnc && \
     git clone https://github.com/novnc/websockify /opt/novnc/utils/websockify

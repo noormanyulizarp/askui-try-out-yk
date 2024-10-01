@@ -64,5 +64,13 @@ RUN if [ ! -d "$HOME/.oh-my-zsh" ]; then \
     echo 'POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(user dir vcs)' > ~/.p10k.zsh && \
     echo 'POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status root_indicator background_jobs)' >> ~/.p10k.zsh
 
+# Copy the VNC, Cloud Storage, and start scripts into the container
+COPY start-vnc.sh /codespace/start-vnc.sh
+COPY mount-cloud-storage.sh /codespace/mount-cloud-storage.sh
+COPY start.sh /codespace/start.sh
+
+# Make scripts executable
+RUN chmod +x /codespace/start-vnc.sh /codespace/mount-cloud-storage.sh /codespace/start.sh
+
 # Set the default command
 CMD ["/bin/zsh"]

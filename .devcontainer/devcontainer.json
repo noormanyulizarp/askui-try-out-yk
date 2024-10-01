@@ -1,6 +1,6 @@
 {
     "name": "Codespace Development Environment",
-    "dockerComposeFile": "docker-compose.yml",
+    "dockerComposeFile": "../codespace/docker-compose.yml",
     "service": "final",
     "workspaceFolder": "/workspace",
     "customizations": {

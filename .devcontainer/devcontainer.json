@@ -15,9 +15,10 @@
         }
     },
     "remoteUser": "vscode",
-    "forwardPorts": [],
+    "forwardPorts": [8080],
     "containerEnv": {
         "MEGA_EMAIL": "${MEGA_EMAIL}",
         "MEGA_PASSWORD": "${MEGA_PASSWORD}"
-    }
+    },
+    "postCreateCommand": "/home/vscode/start-vnc.sh"
 }

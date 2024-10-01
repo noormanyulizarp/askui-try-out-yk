@@ -5,21 +5,16 @@ FROM mcr.microsoft.com/vscode/devcontainers/base:ubuntu-22.04
 USER root
 
 # Set environment variables
-ENV DEBIAN_FRONTEND=noninteractive \
-    MEGA_EMAIL="" \
-    MEGA_PASSWORD="" \
-    PATH="/usr/local/bin:${PATH}" \
-    ZSH_CUSTOM=/home/vscode/.oh-my-zsh/custom \
-    CHECK_MEGA_UPDATE="true"
+ENV DEBIAN_FRONTEND=noninteractive
 
 # Install necessary packages and dependencies
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq \
-    libfuse2 fuse libatk-bridge2.0-0 libcups2 libdrm2 libgtk-3-0 \
-    libgbm1 libc-ares2 libmediainfo0v5 libzen0v5 libpcrecpp0v5 \
-    wget git zsh \
-    xfce4 xfce4-goodies chromium-browser \
-    nautilus sudo \
+    xfce4 xfce4-goodies \
+    chromium-browser \
+    nautilus \
+    sudo \
+    xvfb lsof curl git zsh novnc websockify \
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -29,29 +24,11 @@ RUN wget https://mega.nz/linux/repo/xUbuntu_22.10/amd64/megacmd-xUbuntu_22.10_am
     rm /tmp/megacmd.deb && \
     mega-cmd --version || { echo "MEGA CMD installation failed"; exit 1; }
 
-# Install noVNC and websockify
-RUN mkdir -p /opt/novnc && \
-    wget -qO- https://github.com/novnc/noVNC/archive/refs/heads/master.tar.gz | tar xz --strip-components=1 -C /opt/novnc && \
-    mkdir -p /opt/novnc/utils/websockify && \
-    wget -qO- https://github.com/novnc/websockify/archive/refs/heads/master.tar.gz | tar xz --strip-components=1 -C /opt/novnc/utils/websockify && \
-    if [ -d "/opt/novnc/utils/websockify/websockify" ]; then \
-        mv /opt/novnc/utils/websockify/websockify/* /opt/novnc/utils/websockify/ && \
-        rmdir /opt/novnc/utils/websockify/websockify; \
-    fi && \
-    chmod +x /opt/novnc/utils/websockify/run && \
-    ln -s /opt/novnc/utils/websockify/run /usr/local/bin/websockify && \
-    chown -R vscode:vscode /opt/novnc
-
 # Ensure /usr/local/bin is in PATH
 ENV PATH="/usr/local/bin:${PATH}"
 
-# Switch to vscode user for Oh My Zsh installation
-USER vscode
-
 # Install Oh My Zsh and necessary plugins
-RUN if [ ! -d "$HOME/.oh-my-zsh" ]; then \
-        sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended; \
-    fi && \
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \
     git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting && \
     git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM}/plugins/zsh-autosuggestions && \
     sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/' ~/.zshrc && \
@@ -61,9 +38,6 @@ RUN if [ ! -d "$HOME/.oh-my-zsh" ]; then \
     echo 'alias ll="ls -la"' >> ~/.zshrc && \
     echo 'POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(user dir vcs)' > ~/.p10k.zsh && \
     echo 'POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status root_indicator background_jobs)' >> ~/.p10k.zsh
-
-# Switch back to root for final steps
-USER root
 
 # Copy and configure scripts
 COPY mount-cloud-storage.sh /home/vscode/

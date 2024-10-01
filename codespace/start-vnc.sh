@@ -42,7 +42,12 @@ start_vnc_server() {
     Xvfb :${DISPLAY_NUMBER} -screen 0 1280x800x24 > /tmp/xvfb.log 2>&1 &
 
     sleep 30  # Increased sleep time to ensure Xvfb has time to start
-    log_message "VNC server started on display :${DISPLAY_NUMBER}."
+    if pgrep Xvfb > /dev/null; then
+        log_message "VNC server started on display :${DISPLAY_NUMBER}."
+    else
+        log_message "Failed to start VNC server on display :${DISPLAY_NUMBER}."
+        exit 1
+    fi
 }
 
 # Function to check and restart VNC if it crashes
@@ -64,7 +69,12 @@ start_novnc() {
     /opt/novnc/utils/novnc_proxy --vnc localhost:$((5900 + 1)) --listen $NOVNC_PORT &
 
     sleep 10
-    log_message "noVNC started and connected on port $NOVNC_PORT."
+    if pgrep -f novnc_proxy > /dev/null; then
+        log_message "noVNC started and connected on port $NOVNC_PORT."
+    else
+        log_message "Failed to start noVNC on port $NOVNC_PORT."
+        exit 1
+    fi
 }
 
 # Function to find a free port for noVNC

@@ -35,7 +35,6 @@ RUN apt-get update && \
     dbus-x11 \
     libc-ares2 \
     libmediainfo0v5 \
-    megacmd \
     xfonts-base \
     xfonts-100dpi \
     xfonts-75dpi \

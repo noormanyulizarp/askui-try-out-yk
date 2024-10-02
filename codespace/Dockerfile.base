@@ -33,6 +33,8 @@ RUN apt-get update && \
     libpcrecpp0v5 \
     libzen0v5 \
     dbus-x11 \
+    libc-ares2 \
+    libmediainfo0v5 \
     xfonts-base \
     xfonts-100dpi \
     xfonts-75dpi \

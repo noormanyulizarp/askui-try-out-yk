@@ -24,5 +24,5 @@
         "VNC_PASSWORD": "1234"  // You can make this configurable
     },
     "initializeCommand": "docker-compose -f ${localWorkspaceFolder}/codespace/docker-compose.yml build",  // Removed --no-cache to speed up
-    "postCreateCommand": "/codespace/start.sh"
+    // "postCreateCommand": "/codespace/start.sh"
 }

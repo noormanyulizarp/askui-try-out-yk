@@ -56,23 +56,24 @@ start_vnc_server() {
     local vnc_port=$((VNC_BASE_PORT + display))
 
     log_message "Starting Xvfb on display :${display}..."
-    Xvfb :${display} -screen 0 ${XVFB_RESOLUTION}x24 > /tmp/xvfb.log 2>&1 &
-
+    Xvfb :${display} -screen 0 1280x800x24 > /tmp/xvfb.log 2>&1 &
+    
     sleep 5
     if ! pgrep Xvfb > /dev/null; then
         handle_error "Failed to start Xvfb on display :${display}."
     fi
 
     log_message "Starting TigerVNC on display :${display} (port ${vnc_port})..."
-    vncserver :${display} -geometry $XVFB_RESOLUTION -depth 24 -rfbport ${vnc_port} -nopw > /tmp/tigervnc.log 2>&1 &
+    vncserver :${display} > /tmp/tigervnc.log 2>&1 &
 
     sleep 5
-    if pgrep Xtigervnc > /dev/null; then
+    if pgrep Xvnc > /dev/null; then
         log_message "TigerVNC server started on display :${display}."
     else
         handle_error "Failed to start TigerVNC on display :${display}."
     fi
 }
+
 
 # Find a free port for noVNC
 find_free_port() {

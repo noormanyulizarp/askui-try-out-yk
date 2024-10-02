@@ -4,6 +4,7 @@ USER root
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/usr/local/bin:${PATH}"
+ENV VNC_PASSWORD=1234
 
 # Install necessary packages and dependencies
 RUN apt-get update && \
@@ -47,6 +48,8 @@ RUN mkdir -p /opt/novnc && \
 
 # Set up VNC password
 RUN mkdir -p /root/.vnc && \
-    x11vnc -storepasswd 1234 /root/.vnc/passwd
+    x11vnc -storepasswd $VNC_PASSWORD /root/.vnc/passwd
+
+EXPOSE 5901 5902 5903 8080
 
 CMD ["/bin/bash"]

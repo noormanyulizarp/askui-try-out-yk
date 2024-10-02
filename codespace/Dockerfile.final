@@ -4,4 +4,6 @@ FROM local/zsh_image:latest
 COPY *.sh /codespace/
 RUN find /codespace -name "*.sh" -exec chmod +x {} \;
 
+EXPOSE 5901 5902 5903 8080
+
 CMD ["/bin/zsh"]

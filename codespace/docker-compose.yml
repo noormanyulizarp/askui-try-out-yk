@@ -37,3 +37,9 @@ services:
     environment:
       - MEGA_EMAIL
       - MEGA_PASSWORD
+      - VNC_PASSWORD=1234  # Passed the VNC password
+    ports:
+      - "5901:5901"
+      - "5902:5902"  # For TightVNC
+      - "5903:5903"  # For TigerVNC
+      - "8080:8080"  # noVNC

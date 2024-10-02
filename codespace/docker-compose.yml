@@ -5,13 +5,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.base
-    image: myproject/base_image:latest
+    image: local/base_image:latest
 
   mega:
     build:
       context: .
       dockerfile: Dockerfile.mega
-    image: myproject/mega_image:latest
+    image: local/mega_image:latest
     depends_on:
       - base
 
@@ -19,7 +19,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.zsh
-    image: myproject/zsh_image:latest
+    image: local/zsh_image:latest
     depends_on:
       - base
 
@@ -27,7 +27,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.final
-    image: myproject/final_image:latest
+    image: local/final_image:latest
     depends_on:
       - base
       - mega

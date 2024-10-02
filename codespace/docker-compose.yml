@@ -11,24 +11,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.mega
-    depends_on:
-      - base
     image: mega_image
 
   zsh:
     build:
       context: .
       dockerfile: Dockerfile.zsh
-    depends_on:
-      - base
     image: zsh_image
 
   final:
     build:
       context: .
       dockerfile: Dockerfile.final
-    depends_on:
-      - base
-      - mega
-      - zsh
     image: final_image

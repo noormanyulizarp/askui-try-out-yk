@@ -1,7 +1,9 @@
+# Dockerfile.base
 FROM mcr.microsoft.com/vscode/devcontainers/base:ubuntu-22.04
 
 USER root
 
+# Environment Variables
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/usr/local/bin:${PATH}"
 ENV VNC_PASSWORD=1234
@@ -11,7 +13,6 @@ RUN apt-get update && \
     apt-get install -yq --no-install-recommends \
     xfce4 \
     xfce4-goodies \
-    chromium-browser \
     nautilus \
     sudo \
     xvfb \
@@ -43,6 +44,14 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# Install Google Chrome
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && \
+    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
+    apt-get update && \
+    apt-get install -y google-chrome-stable && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install noVNC
 RUN mkdir -p /opt/novnc && \
     git clone https://github.com/novnc/noVNC.git /opt/novnc && \
@@ -51,6 +60,10 @@ RUN mkdir -p /opt/novnc && \
 # Set up VNC password
 RUN mkdir -p /root/.vnc && \
     x11vnc -storepasswd $VNC_PASSWORD /root/.vnc/passwd
+
+# Verify installations
+RUN which google-chrome || echo "Google Chrome not found."
+RUN ls /opt/novnc && echo "noVNC installed successfully."
 
 EXPOSE 5901 5902 5903 8080
 

@@ -31,6 +31,7 @@ RUN apt-get update && \
     apt-transport-https \
     ca-certificates \
     software-properties-common \
+    libfuse2 fuse libatk-bridge2.0-0 libcups2 libdrm2 libgtk-3-0 \
     libpcrecpp0v5 \
     libzen0v5 \
     dbus-x11 \

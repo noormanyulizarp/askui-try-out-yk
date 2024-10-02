@@ -29,6 +29,27 @@ check_mega_installed() {
     command -v mega-cmd-server &> /dev/null
 }
 
+# Install MEGA CMD if not already installed
+install_mega_cmd() {
+    log_message "Installing MEGA CMD..."
+    
+    OS_VERSION=$(lsb_release -rs) && \
+    MEGA_REPO_URL="https://mega.nz/linux/repo/xUbuntu_${OS_VERSION}/amd64/" && \
+    if wget --spider "${MEGA_REPO_URL}" 2>/dev/null; then \
+        MEGA_CMD_PKG="megacmd-xUbuntu_${OS_VERSION}_amd64.deb" && \
+        wget "${MEGA_REPO_URL}${MEGA_CMD_PKG}" -O /tmp/megacmd.deb && \
+        dpkg -i /tmp/megacmd.deb || { \
+            apt-get update && apt-get install -f -y && \
+            dpkg -i /tmp/megacmd.deb; \
+        } && \
+        rm /tmp/megacmd.deb && \
+        mega-cmd --version || { echo "MEGA CMD installation failed"; exit 1; }; \
+    else \
+        log_message "MEGA CMD is not available for this OS version: ${OS_VERSION}" && \
+        log_message "Continuing without MEGA CMD installation"; \
+    fi
+}
+
 # Start the MEGA CMD server and ensure it runs successfully
 start_mega_server() {
     log_message "Starting MEGA CMD server..."
@@ -108,7 +129,7 @@ sync_mega() {
 
 # Main execution starts here
 main() {
-    retry_command check_mega_installed 3 10
+    retry_command check_mega_installed 3 10 || install_mega_cmd
     retry_command start_mega_server 3 10
     retry_command mount_mega_drive 3 10
     sync_mega

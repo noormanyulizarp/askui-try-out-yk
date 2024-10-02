@@ -22,5 +22,6 @@
         "MEGA_EMAIL": "${MEGA_EMAIL}",
         "MEGA_PASSWORD": "${MEGA_PASSWORD}"
     },
+    "initializeCommand": "docker-compose -f ${localWorkspaceFolder}/codespace/docker-compose.yml build --no-cache",
     "postCreateCommand": "/codespace/start.sh"
 }

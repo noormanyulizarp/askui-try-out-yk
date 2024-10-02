@@ -27,19 +27,28 @@ stop_vnc_server() {
     pkill x11vnc || true
     pkill -f novnc_proxy || true
 
-    find /tmp -name '.X*-lock' -delete
-    find /tmp/.X11-unix -name 'X*' -delete
+    # Only attempt to delete files if the directories exist
+    if [ -d /tmp ]; then
+        find /tmp -name '.X*-lock' -delete 2>/dev/null || true
+    fi
+    if [ -d /tmp/.X11-unix ]; then
+        find /tmp/.X11-unix -name 'X*' -delete 2>/dev/null || true
+    fi
 
     log_message "VNC server stopped and cleaned up."
 }
 
 # Ensure correct ownership and permissions on /tmp/.X11-unix
 ensure_permissions() {
-    if [ -d /tmp/.X11-unix ]; then
-        sudo chown root:root /tmp/.X11-unix
-        sudo chmod 1777 /tmp/.X11-unix
-        log_message "Permissions for /tmp/.X11-unix verified."
+    if [ ! -d /tmp/.X11-unix ]; then
+        log_message "Creating /tmp/.X11-unix directory..."
+        mkdir -p /tmp/.X11-unix
     fi
+    
+    log_message "Setting permissions for /tmp/.X11-unix..."
+    sudo chown root:root /tmp/.X11-unix
+    sudo chmod 1777 /tmp/.X11-unix
+    log_message "Permissions for /tmp/.X11-unix verified."
 }
 
 # Function to find the next available display

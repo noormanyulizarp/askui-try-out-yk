@@ -9,7 +9,6 @@ RUN OS_VERSION=$(lsb_release -rs) && \
         dpkg -i /tmp/megacmd.deb || { apt-get update && apt-get install -f -y && dpkg -i /tmp/megacmd.deb; } && \
         rm /tmp/megacmd.deb && \
         mega-cmd --version || { echo "MEGA CMD installation failed"; exit 1; }; \
-        which mega-cmd;  # Check installation path \
     else \
         echo "MEGA CMD is not available for this OS version: ${OS_VERSION}" && \
         echo "Continuing without MEGA CMD installation"; \

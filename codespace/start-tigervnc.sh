@@ -6,7 +6,7 @@ set -e
 DEFAULT_DISPLAY=1
 DEFAULT_NOVNC_PORT=8080
 VNC_BASE_PORT=5900
-XVFB_RESOLUTION="1280x800x24"
+XVFB_RESOLUTION="1280x800"
 NOVNC_PATH="/opt/novnc/utils/novnc_proxy"
 
 # Logging function
@@ -20,11 +20,11 @@ handle_error() {
     exit 1
 }
 
-# Function to stop running VNC server
+# Stop running VNC server
 stop_vnc_server() {
     log_message "Stopping any running TigerVNC server..."
     pkill Xvfb || log_message "No running Xvfb to stop."
-    pkill Xvnc || log_message "No running TigerVNC to stop."
+    pkill Xtigervnc || log_message "No running TigerVNC to stop."
 
     find /tmp -name '.X*-lock' -delete
     find /tmp/.X11-unix -name 'X*' -delete
@@ -41,7 +41,7 @@ ensure_permissions() {
     fi
 }
 
-# Function to find the next available display
+# Find the next available display
 find_available_display() {
     local display=$DEFAULT_DISPLAY
     while [ -f "/tmp/.X${display}-lock" ]; do
@@ -50,13 +50,13 @@ find_available_display() {
     echo $display
 }
 
-# Function to start the TigerVNC server
+# Start TigerVNC server
 start_vnc_server() {
     local display=$(find_available_display)
     local vnc_port=$((VNC_BASE_PORT + display))
 
     log_message "Starting Xvfb on display :${display}..."
-    Xvfb :${display} -screen 0 $XVFB_RESOLUTION > /tmp/xvfb.log 2>&1 &
+    Xvfb :${display} -screen 0 ${XVFB_RESOLUTION}x24 > /tmp/xvfb.log 2>&1 &
 
     sleep 5
     if ! pgrep Xvfb > /dev/null; then
@@ -67,26 +67,14 @@ start_vnc_server() {
     vncserver :${display} -geometry $XVFB_RESOLUTION -depth 24 -rfbport ${vnc_port} -nopw > /tmp/tigervnc.log 2>&1 &
 
     sleep 5
-    if pgrep Xvnc > /dev/null; then
+    if pgrep Xtigervnc > /dev/null; then
         log_message "TigerVNC server started on display :${display}."
     else
         handle_error "Failed to start TigerVNC on display :${display}."
     fi
 }
 
-# Function to check and restart VNC if it crashes
-check_and_restart_vnc() {
-    log_message "Monitoring TigerVNC server status..."
-    if ! pgrep Xvfb > /dev/null || ! pgrep Xvnc > /dev/null; then
-        log_message "TigerVNC server is not running. Attempting to restart..."
-        stop_vnc_server
-        start_vnc_server
-    else
-        log_message "TigerVNC server is running normally."
-    fi
-}
-
-# Function to find a free port
+# Find a free port for noVNC
 find_free_port() {
     local port=$1
     while lsof -i :$port >/dev/null 2>&1; do
@@ -95,7 +83,7 @@ find_free_port() {
     echo $port
 }
 
-# Function to start noVNC
+# Start noVNC
 start_novnc() {
     local novnc_port=$(find_free_port $DEFAULT_NOVNC_PORT)
     log_message "Starting noVNC on port $novnc_port..."
@@ -109,6 +97,18 @@ start_novnc() {
     fi
 }
 
+# Monitor and restart VNC if crashed
+check_and_restart_vnc() {
+    log_message "Monitoring TigerVNC server status..."
+    if ! pgrep Xvfb > /dev/null || ! pgrep Xtigervnc > /dev/null; then
+        log_message "TigerVNC server is not running. Attempting to restart..."
+        stop_vnc_server
+        start_vnc_server
+    else
+        log_message "TigerVNC server is running normally."
+    fi
+}
+
 # Main script execution
 main() {
     trap 'stop_vnc_server' EXIT
@@ -119,8 +119,8 @@ main() {
     start_novnc
 
     log_message "TigerVNC and noVNC setup complete. Press Ctrl+C to exit."
-    
-    # Keep the script running and periodically check VNC status
+
+    # Keep monitoring and restart if necessary
     while true; do
         sleep 60
         check_and_restart_vnc

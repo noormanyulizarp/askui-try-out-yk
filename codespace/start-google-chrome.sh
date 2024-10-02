@@ -16,8 +16,9 @@ install_google_chrome() {
 
 # Function to create a desktop entry for Google Chrome
 create_desktop_entry() {
-    if [ ! -f ~/.local/share/applications/google-chrome.desktop ]; then
-        cat <<EOF > ~/.local/share/applications/google-chrome.desktop
+    local desktop_entry_path="$HOME/.local/share/applications/google-chrome.desktop"
+    if [ ! -f "$desktop_entry_path" ]; then
+        cat <<EOF > "$desktop_entry_path"
 [Desktop Entry]
 Version=1.0
 Name=Google Chrome
@@ -36,13 +37,10 @@ EOF
 start_xvfb() {
     if pgrep -f "Xvfb :99" > /dev/null; then
         echo "Xvfb is already running for display :99. Stopping it..."
-        kill $(pgrep -f "Xvfb :99") && sleep 1
-        # Ensure Xvfb is completely stopped
-        if pgrep -f "Xvfb :99" > /dev/null; then
-            echo "Failed to stop Xvfb, forcefully killing..."
-            kill -9 $(pgrep -f "Xvfb :99") && sleep 1
-        fi
+        kill $(pgrep -f "Xvfb :99")
+        sleep 1
     fi
+    
     echo "Starting Xvfb..."
     Xvfb :99 -screen 0 1920x1080x24 &
     export DISPLAY=:99
@@ -53,16 +51,20 @@ start_xvfb() {
 start_google_chrome() {
     if pgrep -f "google-chrome" > /dev/null; then
         echo "Google Chrome is already running. Stopping it..."
-        kill $(pgrep -f "google-chrome") && sleep 1
-        # Ensure Google Chrome is completely stopped
-        if pgrep -f "google-chrome" > /dev/null; then
-            echo "Failed to stop Google Chrome, forcefully killing..."
-            kill -9 $(pgrep -f "google-chrome") && sleep 1
-        fi
+        kill $(pgrep -f "google-chrome")
+        sleep 1
     fi
+    
     echo "Launching Google Chrome..."
     google-chrome --no-sandbox --disable-dev-shm-usage --disable-gpu &
-    echo "Google Chrome is now running."
+
+    # Check if Google Chrome started successfully
+    sleep 2  # Give it a moment to start
+    if ! pgrep -f "google-chrome" > /dev/null; then
+        echo "Failed to start Google Chrome. Check for errors."
+    else
+        echo "Google Chrome is now running."
+    fi
 }
 
 # Main logic

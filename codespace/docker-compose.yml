@@ -5,22 +5,30 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.base
-    image: base_image
+    image: myproject/base_image:latest
 
   mega:
     build:
       context: .
       dockerfile: Dockerfile.mega
-    image: mega_image
+    image: myproject/mega_image:latest
+    depends_on:
+      - base
 
   zsh:
     build:
       context: .
       dockerfile: Dockerfile.zsh
-    image: zsh_image
+    image: myproject/zsh_image:latest
+    depends_on:
+      - base
 
   final:
     build:
       context: .
       dockerfile: Dockerfile.final
-    image: final_image
+    image: myproject/final_image:latest
+    depends_on:
+      - base
+      - mega
+      - zsh

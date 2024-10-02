@@ -1,4 +1,4 @@
-FROM base_image
+FROM myproject/base_image:latest
 
 RUN if [ ! -d "$HOME/.oh-my-zsh" ]; then \
         sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended; \

@@ -1,4 +1,4 @@
-FROM base_image
+FROM myproject/base_image:latest
 
 RUN OS_VERSION=$(lsb_release -rs) && \
     MEGA_REPO_URL="https://mega.nz/linux/repo/xUbuntu_${OS_VERSION}/amd64/" && \

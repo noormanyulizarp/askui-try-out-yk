@@ -1,4 +1,4 @@
-FROM zsh_image
+FROM myproject/base_image:latest
 
 # Copy scripts
 COPY *.sh /codespace/

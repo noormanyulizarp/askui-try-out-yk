@@ -6,4 +6,5 @@ RUN find /codespace -name "*.sh" -exec chmod +x {} \;
 
 EXPOSE 5901 5902 5903 8080
 
-CMD ["/bin/zsh"]
+# CMD ["/bin/zsh"]
+CMD ["tail", "-f", "/dev/null"]

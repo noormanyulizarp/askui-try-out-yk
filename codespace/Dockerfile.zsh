@@ -1,4 +1,4 @@
-FROM local/base_image:latest
+FROM local/base_mega:latest
 
 RUN if [ ! -d "$HOME/.oh-my-zsh" ]; then \
         sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended; \

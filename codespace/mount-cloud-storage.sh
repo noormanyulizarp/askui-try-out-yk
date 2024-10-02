@@ -5,6 +5,14 @@ log_message() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
 }
 
+# Check for superuser privileges
+check_superuser() {
+    if [[ "$EUID" -ne 0 ]]; then
+        log_message "This script requires superuser privileges. Please run as root or use sudo."
+        exit 1
+    fi
+}
+
 # Retry mechanism with customizable attempts and sleep time
 retry_command() {
     local command="$1"
@@ -129,6 +137,7 @@ sync_mega() {
 
 # Main execution starts here
 main() {
+    check_superuser
     retry_command check_mega_installed 3 10 || install_mega_cmd
     retry_command start_mega_server 3 10
     retry_command mount_mega_drive 3 10

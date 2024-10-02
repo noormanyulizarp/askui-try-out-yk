@@ -30,8 +30,8 @@ services:
       - base
       - mega
       - zsh
-    volumes:
-      - ..:/workspace:cached
+    # volumes:
+    #   - ..:/workspace:cached
     environment:
       - MEGA_EMAIL
       - MEGA_PASSWORD

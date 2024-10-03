@@ -19,6 +19,7 @@ RUN apt-get update && \
     x11vnc \
     tightvncserver \
     tigervnc-standalone-server \
+    tigervnc-tools \  # Add this line to install tigervnc-tools
     lsof \
     curl \
     git \
@@ -31,7 +32,12 @@ RUN apt-get update && \
     apt-transport-https \
     ca-certificates \
     software-properties-common \
-    libfuse2 fuse libatk-bridge2.0-0 libcups2 libdrm2 libgtk-3-0 \
+    libfuse2 \
+    fuse \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libgtk-3-0 \
     libpcrecpp0v5 \
     libzen0v5 \
     dbus-x11 \
@@ -63,8 +69,9 @@ RUN mkdir -p /root/.vnc && \
     x11vnc -storepasswd $VNC_PASSWORD /root/.vnc/passwd
 
 # Verify installations
-RUN which google-chrome || echo "Google Chrome not found."
-RUN ls /opt/novnc && echo "noVNC installed successfully."
+RUN which google-chrome || echo "Google Chrome not found." && \
+    which tigervncpasswd || echo "tigervncpasswd not found." && \
+    ls /opt/novnc && echo "noVNC installed successfully."
 
 EXPOSE 5901 5902 5903 8080
 

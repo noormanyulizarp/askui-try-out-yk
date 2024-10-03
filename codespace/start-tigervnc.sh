@@ -8,10 +8,11 @@ DEFAULT_NOVNC_PORT=8080
 VNC_BASE_PORT=5900
 XVFB_RESOLUTION="1280x800"
 NOVNC_PATH="/opt/novnc/utils/novnc_proxy"
+LOG_FILE="/tmp/tigervnc_startup.log"
 
 # Logging function
 log_message() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a $LOG_FILE
 }
 
 # Error handling function
@@ -22,21 +23,29 @@ handle_error() {
 
 # Stop running VNC server
 stop_vnc_server() {
-    log_message "Stopping any running TigerVNC server..."
+    log_message "Stopping any running TigerVNC or Xvfb server..."
     pkill Xvfb || log_message "No running Xvfb to stop."
     pkill Xtigervnc || log_message "No running TigerVNC to stop."
 
-    find /tmp -name '.X*-lock' -delete
-    find /tmp/.X11-unix -name 'X*' -delete
-
-    log_message "TigerVNC server stopped and cleaned up."
+    # Ensure proper cleanup of lock files and socket directories
+    if [ -d /tmp/.X11-unix ]; then
+        find /tmp -name '.X*-lock' -delete
+        find /tmp/.X11-unix -name 'X*' -delete
+        log_message "TigerVNC server stopped and cleaned up."
+    else
+        log_message "Directory /tmp/.X11-unix does not exist. Skipping cleanup."
+    fi
 }
 
 # Ensure correct ownership and permissions on /tmp/.X11-unix
 ensure_permissions() {
-    if [ -d /tmp/.X11-unix ]; then
+    if [ ! -d /tmp/.X11-unix ]; then
+        log_message "/tmp/.X11-unix does not exist, creating the directory..."
+        sudo mkdir /tmp/.X11-unix
         sudo chown root:root /tmp/.X11-unix
         sudo chmod 1777 /tmp/.X11-unix
+        log_message "Directory /tmp/.X11-unix created and permissions set."
+    else
         log_message "Permissions for /tmp/.X11-unix verified."
     fi
 }
@@ -56,7 +65,7 @@ start_vnc_server() {
     local vnc_port=$((VNC_BASE_PORT + display))
 
     log_message "Starting Xvfb on display :${display}..."
-    Xvfb :${display} -screen 0 1280x800x24 > /tmp/xvfb.log 2>&1 &
+    Xvfb :${display} -screen 0 $XVFB_RESOLUTION > /tmp/xvfb.log 2>&1 &
     
     sleep 5
     if ! pgrep Xvfb > /dev/null; then
@@ -67,13 +76,12 @@ start_vnc_server() {
     vncserver :${display} > /tmp/tigervnc.log 2>&1 &
 
     sleep 5
-    if pgrep Xvnc > /dev/null; then
-        log_message "TigerVNC server started on display :${display}."
+    if ! pgrep Xtigervnc > /dev/null; then
+        handle_error "Failed to start TigerVNC on display :${display}. Check /tmp/tigervnc.log for details."
     else
-        handle_error "Failed to start TigerVNC on display :${display}."
+        log_message "TigerVNC server started on display :${display}."
     fi
 }
-
 
 # Find a free port for noVNC
 find_free_port() {

@@ -17,7 +17,7 @@ check_superuser() {
 retry_command() {
     local command="$1"
     local max_attempts="$2"
-    local sleep_time="$3"
+    local sleep_time="$2"
     local attempt=1
 
     until $command; do
@@ -59,49 +59,118 @@ install_mega_cmd() {
 }
 
 # Start the MEGA CMD server and ensure it runs successfully
+# start_mega_server() {
+#     log_message "Starting MEGA CMD server..."
+#     mega-cmd-server &
+
+#     local max_wait=120
+#     local elapsed=0
+
+#     until mega-whoami &> /dev/null; do
+#         if (( elapsed >= max_wait )); then
+#             log_message "Error: MEGA CMD server failed to start within $max_wait seconds."
+#             return 1
+#         fi
+#         log_message "Waiting for MEGA CMD server to start... ($elapsed seconds)"
+#         sleep 2
+#         elapsed=$((elapsed + 2))
+#     done
+#     log_message "MEGA CMD server started successfully."
+# }
+
+# Start the MEGA CMD server and ensure it runs successfully
 start_mega_server() {
     log_message "Starting MEGA CMD server..."
+    
+    # Check if the server is already running
+    if pgrep -x "mega-cmd-server" > /dev/null; then
+        log_message "MEGA CMD server is already running."
+        return 0
+    fi
+
     mega-cmd-server &
 
-    local max_wait=120
-    local elapsed=0
+    local max_attempts=3
+    local attempt=1
+    local max_wait=4  # 4 seconds per attempt
 
     until mega-whoami &> /dev/null; do
-        if (( elapsed >= max_wait )); then
-            log_message "Error: MEGA CMD server failed to start within $max_wait seconds."
+        if (( attempt >= max_attempts )); then
+            log_message "Error: MEGA CMD server failed to start after $((attempt - 1)) attempts."
             return 1
         fi
-        log_message "Waiting for MEGA CMD server to start... ($elapsed seconds)"
-        sleep 2
-        elapsed=$((elapsed + 2))
+        log_message "Waiting for MEGA CMD server to start... (Attempt $attempt/$max_attempts)"
+        ((attempt++))
+        sleep "$max_wait"
     done
+
     log_message "MEGA CMD server started successfully."
 }
 
-# Mount the MEGA drive at a specified path
-mount_mega_drive() {
-    local mount_path="/workspaces/${CODESPACE_REPO_NAME}/mega"
-    if ! mountpoint -q "$mount_path"; then
-        log_message "Mounting MEGA to $mount_path..."
-        mkdir -p "$mount_path"
 
-        local max_wait=120
-        local elapsed=0
-
-        until mega-mount "$mount_path" &> /dev/null; do
-            if (( elapsed >= max_wait )); then
-                log_message "Error: Failed to mount MEGA within $max_wait seconds."
-                exit 1
-            fi
-            log_message "Retrying MEGA mount... ($elapsed seconds)"
-            sleep 5
-            elapsed=$((elapsed + 5))
-        done
-        log_message "MEGA mounted successfully."
-    else
-        log_message "MEGA is already mounted at $mount_path."
-    fi
+# Function to log MEGA credentials
+log_mega_credentials() {
+    log_message "Logging MEGA credentials for debugging."
+    
+    # Ensure these variables are set (adapt as necessary for your environment)
+    local MEGA_EMAIL="${MEGA_EMAIL:-not_set}"
+    local MEGA_PASSWORD="${MEGA_PASSWORD:-not_set}"
+    
+    # Log email and password (adjust if required for security, ideally log just email)
+    log_message "MEGA Email: $MEGA_EMAIL"
+    log_message "MEGA Password: $MEGA_PASSWORD"
 }
+
+# Mount the MEGA drive at a specified path
+# mount_mega_drive() {
+#     local mount_path="/workspaces/${CODESPACE_REPO_NAME}/mega"
+#     if ! mountpoint -q "$mount_path"; then
+#         log_message "Mounting MEGA to $mount_path..."
+#         mkdir -p "$mount_path"
+
+#         local max_wait=120
+#         local elapsed=0
+
+#         until mega-mount "$mount_path" &> /dev/null; do
+#             if (( elapsed >= max_wait )); then
+#                 log_message "Error: Failed to mount MEGA within $max_wait seconds."
+#                 exit 1
+#             fi
+#             log_message "Retrying MEGA mount... ($elapsed seconds)"
+#             sleep 5
+#             elapsed=$((elapsed + 5))
+#         done
+#         log_message "MEGA mounted successfully."
+#     else
+#         log_message "MEGA is already mounted at $mount_path."
+#     fi
+# }
+
+# Mount MEGA CMD to a specified directory
+mount_mega_storage() {
+    local mount_point="/workspaces/mega"
+    local max_attempts=6  # 6 attempts with 5 seconds each = 30 seconds total
+    local attempt=0
+    local wait_time=5      # 5 seconds wait time between attempts
+
+    log_message "Mounting MEGA to ${mount_point}..."
+
+    # Create the mount point if it doesn't exist
+    mkdir -p "${mount_point}"
+
+    until mega-mount "${mount_point}" &> /dev/null; do
+        if (( attempt >= max_attempts )); then
+            log_message "Error: Failed to mount MEGA after $attempt attempts."
+            return 1
+        fi
+        log_message "Retrying MEGA mount... ($((attempt * wait_time)) seconds)"
+        ((attempt++))
+        sleep "$wait_time"
+    done
+
+    log_message "MEGA successfully mounted to ${mount_point}."
+}
+
 
 # Create a desktop shortcut for easy MEGA access
 create_mega_shortcut() {

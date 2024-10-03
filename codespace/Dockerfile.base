@@ -19,7 +19,7 @@ RUN apt-get update && \
     x11vnc \
     tightvncserver \
     tigervnc-standalone-server \
-    tigervnc-tools \  # Add this line to install tigervnc-tools
+    tigervnc-tools \
     lsof \
     curl \
     git \

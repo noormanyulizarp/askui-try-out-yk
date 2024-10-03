@@ -1,217 +1,177 @@
 #!/bin/bash
 
-# Logging function for consistent message format
+# Logging function
 log_message() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
 }
 
-# Check for superuser privileges
-check_superuser() {
-    if [[ "$EUID" -ne 0 ]]; then
-        log_message "This script requires superuser privileges. Please run as root or use sudo."
-        exit 1
-    fi
-}
-
-# Retry mechanism with customizable attempts and sleep time
-retry_command() {
-    local command="$1"
-    local max_attempts="$2"
-    local sleep_time="$2"
+# Retry mechanism with max attempts
+retry() {
+    local -r command="$1"
+    local -r max_attempts="$2"
+    local -r sleep_time="$3"
     local attempt=1
 
     until $command; do
-        if (( attempt >= max_attempts )); then
-            log_message "Error: Command failed after $max_attempts attempts."
+        if (( attempt == max_attempts )); then
+            log_message "Error: Failed after $max_attempts attempts."
             return 1
         fi
-        log_message "Retrying command... (Attempt $attempt/$max_attempts)"
+        log_message "Retrying... (Attempt $attempt/$max_attempts)"
         ((attempt++))
         sleep "$sleep_time"
     done
     return 0
 }
 
-# Check if MEGA CMD is installed
-check_mega_installed() {
-    command -v mega-cmd-server &> /dev/null
+# Function to dynamically wait for nodes to be fetched
+wait_for_nodes() {
+    log_message "Waiting for MEGA to finish fetching nodes..."
+    local max_wait=300  # Maximum wait time in seconds
+    local elapsed=0
+    local sleep_time=5  # Base sleep time
+
+    while true; do
+        # Check if nodes are accessible
+        if mega-ls &> /dev/null; then
+            log_message "MEGA nodes fetched successfully."
+            return
+        fi
+        
+        # Calculate elapsed time and increase wait time if needed
+        if (( elapsed >= max_wait )); then
+            log_message "Error: MEGA node fetching took too long."
+            exit 1
+        fi
+
+        log_message "Still waiting... ($elapsed seconds elapsed)"
+        sleep "$sleep_time"
+        elapsed=$((elapsed + sleep_time))
+
+        # Increase sleep time if nodes are large (assuming larger nodes take more time)
+        sleep_time=$((sleep_time + 2))
+    done
 }
 
-# Install MEGA CMD if not already installed
-install_mega_cmd() {
-    log_message "Installing MEGA CMD..."
-    
-    OS_VERSION=$(lsb_release -rs) && \
-    MEGA_REPO_URL="https://mega.nz/linux/repo/xUbuntu_${OS_VERSION}/amd64/" && \
-    if wget --spider "${MEGA_REPO_URL}" 2>/dev/null; then \
-        MEGA_CMD_PKG="megacmd-xUbuntu_${OS_VERSION}_amd64.deb" && \
-        wget "${MEGA_REPO_URL}${MEGA_CMD_PKG}" -O /tmp/megacmd.deb && \
-        dpkg -i /tmp/megacmd.deb || { \
-            apt-get update && apt-get install -f -y && \
-            dpkg -i /tmp/megacmd.deb; \
-        } && \
-        rm /tmp/megacmd.deb && \
-        mega-cmd --version || { echo "MEGA CMD installation failed"; exit 1; }; \
-    else \
-        log_message "MEGA CMD is not available for this OS version: ${OS_VERSION}" && \
-        log_message "Continuing without MEGA CMD installation"; \
+# Function to configure MEGA
+configure_mega() {
+    if ! mega-whoami &> /dev/null; then
+        if [ -z "$MEGA_EMAIL" ] || [ -z "$MEGA_PASSWORD" ]; then
+            log_message "Error: MEGA credentials not set. Please set MEGA_EMAIL and MEGA_PASSWORD."
+            exit 1
+        fi
+        
+        log_message "Configuring MEGA..."
+        
+        # Login to MEGA and check for successful login via the output
+        if output=$(mega-login "$MEGA_EMAIL" "$MEGA_PASSWORD"); then
+            if [[ "$output" == *"Fetching nodes"* ]]; then
+                log_message "Logged into MEGA successfully. Fetching nodes..."
+                wait_for_nodes
+            else
+                log_message "Error: Failed to login to MEGA. Output: $output"
+                exit 1
+            fi
+        else
+            log_message "Error: Failed to login to MEGA."
+            exit 1
+        fi
+    else
+        log_message "Already logged into MEGA."
     fi
 }
 
-# Start the MEGA CMD server and ensure it runs successfully
-# start_mega_server() {
-#     log_message "Starting MEGA CMD server..."
-#     mega-cmd-server &
-
-#     local max_wait=120
-#     local elapsed=0
-
-#     until mega-whoami &> /dev/null; do
-#         if (( elapsed >= max_wait )); then
-#             log_message "Error: MEGA CMD server failed to start within $max_wait seconds."
-#             return 1
-#         fi
-#         log_message "Waiting for MEGA CMD server to start... ($elapsed seconds)"
-#         sleep 2
-#         elapsed=$((elapsed + 2))
-#     done
-#     log_message "MEGA CMD server started successfully."
-# }
-
-# Start the MEGA CMD server and ensure it runs successfully
-start_mega_server() {
-    log_message "Starting MEGA CMD server..."
-    
-    # Check if the server is already running
-    if pgrep -x "mega-cmd-server" > /dev/null; then
-        log_message "MEGA CMD server is already running."
-        return 0
+# Function to mount MEGA
+mount_mega() {
+    if ! mountpoint -q /workspace/mega; then
+        log_message "Mounting MEGA..."
+        mkdir -p /workspace/mega
+        if retry "mega-mount /workspace/mega" 5 2; then
+            log_message "MEGA mounted successfully."
+        else
+            log_message "Error: Failed to mount MEGA."
+            exit 1
+        fi
+    else
+        log_message "MEGA is already mounted."
     fi
-
-    mega-cmd-server &
-
-    local max_attempts=3
-    local attempt=1
-    local max_wait=4  # 4 seconds per attempt
-
-    until mega-whoami &> /dev/null; do
-        if (( attempt >= max_attempts )); then
-            log_message "Error: MEGA CMD server failed to start after $((attempt - 1)) attempts."
-            return 1
-        fi
-        log_message "Waiting for MEGA CMD server to start... (Attempt $attempt/$max_attempts)"
-        ((attempt++))
-        sleep "$max_wait"
-    done
-
-    log_message "MEGA CMD server started successfully."
 }
 
-
-# Function to log MEGA credentials
-log_mega_credentials() {
-    log_message "Logging MEGA credentials for debugging."
-    
-    # Ensure these variables are set (adapt as necessary for your environment)
-    local MEGA_EMAIL="${MEGA_EMAIL:-not_set}"
-    local MEGA_PASSWORD="${MEGA_PASSWORD:-not_set}"
-    
-    # Log email and password (adjust if required for security, ideally log just email)
-    log_message "MEGA Email: $MEGA_EMAIL"
-    log_message "MEGA Password: $MEGA_PASSWORD"
-}
-
-# Mount the MEGA drive at a specified path
-# mount_mega_drive() {
-#     local mount_path="/workspaces/${CODESPACE_REPO_NAME}/mega"
-#     if ! mountpoint -q "$mount_path"; then
-#         log_message "Mounting MEGA to $mount_path..."
-#         mkdir -p "$mount_path"
-
-#         local max_wait=120
-#         local elapsed=0
-
-#         until mega-mount "$mount_path" &> /dev/null; do
-#             if (( elapsed >= max_wait )); then
-#                 log_message "Error: Failed to mount MEGA within $max_wait seconds."
-#                 exit 1
-#             fi
-#             log_message "Retrying MEGA mount... ($elapsed seconds)"
-#             sleep 5
-#             elapsed=$((elapsed + 5))
-#         done
-#         log_message "MEGA mounted successfully."
-#     else
-#         log_message "MEGA is already mounted at $mount_path."
-#     fi
-# }
-
-# Mount MEGA CMD to a specified directory
-mount_mega_storage() {
-    local mount_point="/workspaces/mega"
-    local max_attempts=6  # 6 attempts with 5 seconds each = 30 seconds total
-    local attempt=0
-    local wait_time=5      # 5 seconds wait time between attempts
-
-    log_message "Mounting MEGA to ${mount_point}..."
-
-    # Create the mount point if it doesn't exist
-    mkdir -p "${mount_point}"
-
-    until mega-mount "${mount_point}" &> /dev/null; do
-        if (( attempt >= max_attempts )); then
-            log_message "Error: Failed to mount MEGA after $attempt attempts."
-            return 1
-        fi
-        log_message "Retrying MEGA mount... ($((attempt * wait_time)) seconds)"
-        ((attempt++))
-        sleep "$wait_time"
-    done
-
-    log_message "MEGA successfully mounted to ${mount_point}."
-}
-
-
-# Create a desktop shortcut for easy MEGA access
-create_mega_shortcut() {
-    log_message "Creating MEGA desktop shortcut..."
-    local desktop_dir="/home/vscode/Desktop"
-    mkdir -p "$desktop_dir"
-    
-    cat <<EOF > "$desktop_dir/MEGA.desktop"
+# Function to create a desktop shortcut for MEGA
+create_desktop_shortcut() {
+    log_message "Creating desktop shortcut for MEGA..."
+    mkdir -p /home/gitpod/Desktop
+    cat <<EOF > /home/gitpod/Desktop/MEGA.desktop
 [Desktop Entry]
 Name=MEGA
 Comment=Access your MEGA cloud storage
-Exec=nautilus /workspaces/${CODESPACE_REPO_NAME}/mega
+Exec=nautilus /workspace/mega
 Icon=folder
 Terminal=false
 Type=Application
 Categories=Utility;
 EOF
-
-    chmod +x "$desktop_dir/MEGA.desktop"
-    log_message "MEGA desktop shortcut created."
+    chmod +x /home/gitpod/Desktop/MEGA.desktop
+    log_message "Desktop shortcut for MEGA created."
 }
 
-# Sync the local folder with the MEGA folder
+# Function to sync local folder with MEGA folder
 sync_mega() {
-    log_message "Starting MEGA sync..."
-    if command -v mega-sync &> /dev/null; then
-        mega-sync /workspaces/${CODESPACE_REPO_NAME}/mega /GitPod-Workspace
+    log_message "Syncing local folder with MEGA..."
+    
+    # Retry sync in case of "not logged in" error
+    local attempts=3
+    for ((i = 1; i <= attempts; i++)); do
+        if command -v mega-sync &> /dev/null; then
+            mega-sync /workspace/mega /GitPod-Workspace
+        else
+            mega-cmd sync /workspace/mega /GitPod-Workspace
+        fi
+        
+        # Check if sync succeeded
+        if [[ $? -eq 0 ]]; then
+            log_message "Sync complete."
+            return
+        else
+            log_message "Error: Sync failed. Attempting to re-login..."
+            configure_mega  # Re-login if sync fails
+        fi
+    done
+    
+    log_message "Error: Sync failed after $attempts attempts."
+    exit 1
+}
+
+# Automatic MEGA CMD update check (optional)
+check_for_mega_update() {
+    log_message "Checking for MEGA CMD updates..."
+    local current_version
+    current_version=$(mega-cmd --version | grep 'MEGA CMD version')
+
+    local latest_version
+    latest_version=$(curl -s https://mega.nz/linux/repo/xUbuntu_22.10/amd64/Packages | grep 'Version:' | awk '{print $2}' | head -1)
+
+    if [ "$current_version" != "$latest_version" ]; then
+        log_message "Updating MEGA CMD to latest version..."
+        wget https://mega.nz/linux/repo/xUbuntu_22.10/amd64/megacmd-xUbuntu_22.10_amd64.deb -O /tmp/megacmd.deb
+        dpkg -i /tmp/megacmd.deb
+        apt-get -f install -y
+        rm /tmp/megacmd.deb
+        log_message "MEGA CMD updated to version $latest_version."
     else
-        mega-cmd sync start /workspaces/${CODESPACE_REPO_NAME}/mega /GitPod-Workspace
+        log_message "MEGA CMD is already up to date."
     fi
-    log_message "MEGA sync completed."
 }
 
-# Main execution starts here
-main() {
-    check_superuser
-    retry_command check_mega_installed 3 10 || install_mega_cmd
-    retry_command start_mega_server 3 10
-    retry_command mount_mega_drive 3 10
-    sync_mega
-    create_mega_shortcut
-}
+# Run MEGA configuration, mounting, and syncing
+configure_mega
+mount_mega
+sync_mega
 
-main "$@"
+# Create the desktop shortcut
+create_desktop_shortcut
+
+# Check for MEGA CMD updates
+# check_for_mega_update
+
+log_message "MEGA has been mounted and synced. The desktop shortcut is ready to use."

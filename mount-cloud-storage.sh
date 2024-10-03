@@ -8,7 +8,7 @@ log_message() {
 # Retry mechanism with max attempts
 retry() {
     local -r command=$1
-    local -r max_attempts=$10
+    local -r max_attempts=$2
     local -r sleep_time=$3
     local attempt=1
 
@@ -26,7 +26,7 @@ retry() {
 
 # Function to configure MEGA
 configure_mega() {
-    if ! mega-whoami; then
+    if ! mega-whoami &> /dev/null; then
         if [ -z "$MEGA_EMAIL" ] || [ -z "$MEGA_PASSWORD" ]; then
             log_message "Error: MEGA credentials not set. Please set MEGA_EMAIL and MEGA_PASSWORD."
             exit 1
@@ -37,6 +37,20 @@ configure_mega() {
             exit 1
         fi
         log_message "Logged into MEGA successfully."
+
+        # Wait for nodes to be fetched after login
+        local max_wait=60  # Maximum wait time in seconds
+        local elapsed=0
+        while ! mega-ls &> /dev/null; do
+            if (( elapsed >= max_wait )); then
+                log_message "Error: MEGA node fetching took too long."
+                exit 1
+            fi
+            log_message "Waiting for MEGA to finish fetching nodes... ($elapsed seconds)"
+            sleep 5
+            elapsed=$((elapsed + 5))
+        done
+        log_message "MEGA nodes fetched successfully."
     else
         log_message "Already logged into MEGA."
     fi
@@ -79,12 +93,28 @@ EOF
 # Function to sync local folder with MEGA folder
 sync_mega() {
     log_message "Syncing local folder with MEGA..."
-    if command -v mega-sync &> /dev/null; then
-        mega-sync /workspace/mega /GitPod-Workspace
-    else
-        mega-cmd sync /workspace/mega /GitPod-Workspace
-    fi
-    log_message "Sync complete."
+    
+    # Retry sync in case of "not logged in" error
+    local attempts=3
+    for ((i = 1; i <= attempts; i++)); do
+        if command -v mega-sync &> /dev/null; then
+            mega-sync /workspace/mega /GitPod-Workspace
+        else
+            mega-cmd sync /workspace/mega /GitPod-Workspace
+        fi
+        
+        # Check if sync succeeded
+        if [[ $? -eq 0 ]]; then
+            log_message "Sync complete."
+            return
+        else
+            log_message "Error: Sync failed. Attempting to re-login..."
+            configure_mega  # Re-login if sync fails
+        fi
+    done
+    
+    log_message "Error: Sync failed after $attempts attempts."
+    exit 1
 }
 
 # Automatic MEGA CMD update check (optional)

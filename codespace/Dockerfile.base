@@ -68,23 +68,6 @@ RUN mkdir -p /opt/novnc && \
 RUN mkdir -p /root/.vnc && \
     x11vnc -storepasswd $VNC_PASSWORD /root/.vnc/passwd
 
-# Install MEGA CMD
-RUN OS_VERSION=$(lsb_release -rs) && \
-    MEGA_REPO_URL="https://mega.nz/linux/repo/xUbuntu_${OS_VERSION}/amd64/" && \
-    if wget --spider "${MEGA_REPO_URL}" 2>/dev/null; then \
-        MEGA_CMD_PKG="megacmd-xUbuntu_${OS_VERSION}_amd64.deb" && \
-        wget "${MEGA_REPO_URL}${MEGA_CMD_PKG}" -O /tmp/megacmd.deb && \
-        dpkg -i /tmp/megacmd.deb || { \
-            apt-get update && apt-get install -f -y && \
-            dpkg -i /tmp/megacmd.deb; \
-        } && \
-        rm /tmp/megacmd.deb && \
-        mega-cmd --version || { echo "MEGA CMD installation failed"; exit 1; }; \
-    else \
-        echo "MEGA CMD is not available for this OS version: ${OS_VERSION}" && \
-        echo "Continuing without MEGA CMD installation"; \
-    fi
-
 # Verify installation
 RUN which mega-cmd || echo "mega-cmd not found."
 

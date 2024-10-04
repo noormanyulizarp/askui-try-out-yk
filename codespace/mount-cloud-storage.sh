@@ -24,7 +24,16 @@ retry() {
     return 0
 }
 
-# Function to dynamically wait for nodes to be fetched
+# Function to ensure MEGA CMD server is running
+start_mega_cmd_server() {
+    if ! pgrep -x "mega-cmd-server" > /dev/null; then
+        log_message "Starting mega-cmd-server..."
+        mega-cmd-server &
+        sleep 3  # Give the server some time to start
+    fi
+}
+
+# Function to wait for MEGA nodes to be fetched
 wait_for_nodes() {
     log_message "Waiting for MEGA to finish fetching nodes..."
     local max_wait=300  # Maximum wait time in seconds
@@ -38,7 +47,7 @@ wait_for_nodes() {
             return
         fi
         
-        # Calculate elapsed time and increase wait time if needed
+        # Check for timeout
         if (( elapsed >= max_wait )); then
             log_message "Error: MEGA node fetching took too long."
             exit 1
@@ -47,9 +56,7 @@ wait_for_nodes() {
         log_message "Still waiting... ($elapsed seconds elapsed)"
         sleep "$sleep_time"
         elapsed=$((elapsed + sleep_time))
-
-        # Increase sleep time if nodes are large (assuming larger nodes take more time)
-        sleep_time=$((sleep_time + 2))
+        sleep_time=$((sleep_time + 2))  # Increase wait time if needed
     done
 }
 
@@ -63,7 +70,7 @@ configure_mega() {
         
         log_message "Configuring MEGA..."
         
-        # Login to MEGA and check for successful login via the output
+        # Login to MEGA
         if output=$(mega-login "$MEGA_EMAIL" "$MEGA_PASSWORD"); then
             if [[ "$output" == *"Fetching nodes"* ]]; then
                 log_message "Logged into MEGA successfully. Fetching nodes..."
@@ -97,6 +104,25 @@ mount_mega() {
     fi
 }
 
+# Function to sync local folder with MEGA folder
+sync_mega() {
+    log_message "Syncing local folder with MEGA..."
+    
+    local attempts=3
+    for ((i = 1; i <= attempts; i++)); do
+        if mega-sync /workspace/mega /GitPod-Workspace; then
+            log_message "Sync complete."
+            return
+        else
+            log_message "Error: Sync failed. Attempting to re-login..."
+            configure_mega  # Re-login if sync fails
+        fi
+    done
+    
+    log_message "Error: Sync failed after $attempts attempts."
+    exit 1
+}
+
 # Function to create a desktop shortcut for MEGA
 create_desktop_shortcut() {
     log_message "Creating desktop shortcut for MEGA..."
@@ -115,63 +141,12 @@ EOF
     log_message "Desktop shortcut for MEGA created."
 }
 
-# Function to sync local folder with MEGA folder
-sync_mega() {
-    log_message "Syncing local folder with MEGA..."
-    
-    # Retry sync in case of "not logged in" error
-    local attempts=3
-    for ((i = 1; i <= attempts; i++)); do
-        if command -v mega-sync &> /dev/null; then
-            mega-sync /workspace/mega /GitPod-Workspace
-        else
-            mega-cmd sync /workspace/mega /GitPod-Workspace
-        fi
-        
-        # Check if sync succeeded
-        if [[ $? -eq 0 ]]; then
-            log_message "Sync complete."
-            return
-        else
-            log_message "Error: Sync failed. Attempting to re-login..."
-            configure_mega  # Re-login if sync fails
-        fi
-    done
-    
-    log_message "Error: Sync failed after $attempts attempts."
-    exit 1
-}
-
-# Automatic MEGA CMD update check (optional)
-check_for_mega_update() {
-    log_message "Checking for MEGA CMD updates..."
-    local current_version
-    current_version=$(mega-cmd --version | grep 'MEGA CMD version')
-
-    local latest_version
-    latest_version=$(curl -s https://mega.nz/linux/repo/xUbuntu_22.10/amd64/Packages | grep 'Version:' | awk '{print $2}' | head -1)
-
-    if [ "$current_version" != "$latest_version" ]; then
-        log_message "Updating MEGA CMD to latest version..."
-        wget https://mega.nz/linux/repo/xUbuntu_22.10/amd64/megacmd-xUbuntu_22.10_amd64.deb -O /tmp/megacmd.deb
-        dpkg -i /tmp/megacmd.deb
-        apt-get -f install -y
-        rm /tmp/megacmd.deb
-        log_message "MEGA CMD updated to version $latest_version."
-    else
-        log_message "MEGA CMD is already up to date."
-    fi
-}
-
-# Run MEGA configuration, mounting, and syncing
-configure_mega
-mount_mega
-sync_mega
-
-# Create the desktop shortcut
-create_desktop_shortcut
-
-# Check for MEGA CMD updates
-# check_for_mega_update
+# Run the script
+log_message "Starting MEGA configuration..."
+start_mega_cmd_server  # Start MEGA CMD server
+configure_mega          # Configure MEGA
+mount_mega             # Mount MEGA
+sync_mega              # Sync local folder with MEGA
+create_desktop_shortcut # Create desktop shortcut
 
 log_message "MEGA has been mounted and synced. The desktop shortcut is ready to use."

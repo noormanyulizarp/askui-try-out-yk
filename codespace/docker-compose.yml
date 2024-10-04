@@ -1,14 +1,18 @@
+version: '3'
+
 services:
   base:
     build:
       context: .
       dockerfile: Dockerfile.base
+      no_cache: true
     image: local/base_image:latest
 
   mega:
     build:
       context: .
       dockerfile: Dockerfile.mega
+      no_cache: true
     image: local/mega_image:latest
     depends_on:
       - base
@@ -17,6 +21,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.zsh
+      no_cache: true
     image: local/zsh_image:latest
     depends_on:
       - base
@@ -25,6 +30,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.final
+      no_cache: true
     image: local/final_image:latest
     depends_on:
       - base

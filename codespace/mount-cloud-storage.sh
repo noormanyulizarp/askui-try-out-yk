@@ -24,6 +24,33 @@ retry() {
     return 0
 }
 
+# Function to check and set permissions for .megaCmd directory
+check_and_fix_mega_permissions() {
+    local mega_cmd_home=${MEGA_CMD_HOME:-/home/vscode/.megaCmd}
+
+    # Check if the directory exists
+    if [ ! -d "$mega_cmd_home" ]; then
+        log_message "Error: MEGA CMD directory $mega_cmd_home does not exist."
+        return 1
+    fi
+
+    # Check if the user has the correct ownership and fix if necessary
+    if [ "$(stat -c %U $mega_cmd_home)" != "vscode" ]; then
+        log_message "Fixing permissions for $mega_cmd_home..."
+        sudo chown -R vscode:vscode "$mega_cmd_home"
+        if [ $? -eq 0 ]; then
+            log_message "Permissions fixed for $mega_cmd_home."
+        else
+            log_message "Error: Failed to fix permissions for $mega_cmd_home."
+            return 1
+        fi
+    else
+        log_message "Permissions for $mega_cmd_home are correct."
+    fi
+
+    return 0
+}
+
 # Function to dynamically wait for nodes to be fetched
 wait_for_nodes() {
     log_message "Waiting for MEGA to finish fetching nodes..."
@@ -114,6 +141,12 @@ EOF
 sync_mega() {
     log_message "Syncing local folder with MEGA..."
     
+    # Check for active syncs
+    if mega-sync --status | grep -q "Active"; then
+        log_message "Error: Sync already active. Skipping sync operation."
+        return 0  # Return without attempting to sync
+    fi
+
     # Retry sync in case of "not logged in" error
     local attempts=3
     for ((i = 1; i <= attempts; i++)); do
@@ -136,6 +169,10 @@ sync_mega() {
     log_message "Error: Sync failed after $attempts attempts."
     exit 1
 }
+
+
+# Check MEGA CMD environment and fix permissions
+check_and_fix_mega_permissions
 
 # Run MEGA configuration, mounting, and syncing
 configure_mega

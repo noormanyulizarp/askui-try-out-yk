@@ -1,6 +1,16 @@
 # Dockerfile.mega
 FROM local/base_image:latest
 
+# Install dependencies required for MEGA CMD
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    libfreeimage3 \
+    libilmbase25 \
+    libjxr0 \
+    libopenexr25 \
+    libraw20 && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install MEGA CMD
 RUN OS_VERSION=$(lsb_release -rs) && \
     MEGA_REPO_URL="https://mega.nz/linux/repo/xUbuntu_${OS_VERSION}/amd64/" && \

@@ -68,9 +68,6 @@ RUN mkdir -p /opt/novnc && \
 RUN mkdir -p /root/.vnc && \
     x11vnc -storepasswd $VNC_PASSWORD /root/.vnc/passwd
 
-# Verify installation
-RUN which mega-cmd || echo "mega-cmd not found."
-
 # Verify installations
 RUN which google-chrome || echo "Google Chrome not found." && \
     which tigervncpasswd || echo "tigervncpasswd not found." && \

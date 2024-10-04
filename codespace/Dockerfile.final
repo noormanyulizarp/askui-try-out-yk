@@ -1,5 +1,6 @@
-# Use the base image as the starting point
-FROM local/base_image:latest
+# Use multi-stage builds to inherit from both mega and zsh images
+FROM local/mega_image:latest as mega
+FROM local/zsh_image:latest as zsh
 
 # Copy MEGA CMD from the mega stage
 COPY --from=local/mega_image:latest /usr/bin/mega-* /usr/bin/

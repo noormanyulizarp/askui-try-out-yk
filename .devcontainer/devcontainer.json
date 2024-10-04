@@ -17,12 +17,11 @@
         }
     },
     "remoteUser": "vscode",
-    "forwardPorts": [8080, 5901, 5902, 5903],  // Added more VNC ports for different servers
+    "forwardPorts": [8080, 5901, 5902, 5903],
     "containerEnv": {
         "MEGA_EMAIL": "${MEGA_EMAIL}",
         "MEGA_PASSWORD": "${MEGA_PASSWORD}",
-        "VNC_PASSWORD": "1234"  // You can make this configurable
+        "VNC_PASSWORD": "1234"
     },
-    "initializeCommand": "docker-compose -f ${localWorkspaceFolder}/codespace/docker-compose.yml build",  // Removed --no-cache to speed up
-    // "postCreateCommand": "/codespace/start.sh"
+    "initializeCommand": "docker-compose -f ${localWorkspaceFolder}/codespace/docker-compose.yml build",
 }

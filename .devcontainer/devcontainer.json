@@ -23,6 +23,6 @@
         "MEGA_PASSWORD": "${MEGA_PASSWORD}",
         "VNC_PASSWORD": "1234"  // You can make this configurable
     },
-    "initializeCommand": "docker-compose -f ${localWorkspaceFolder}/codespace/docker-compose.yml build",  // Removed --no-cache to speed up
+    "initializeCommand": "docker-compose -f ${localWorkspaceFolder}/codespace/docker-compose.yml build --no-cache",  // Removed --no-cache to speed up
     // "postCreateCommand": "/codespace/start.sh"
 }

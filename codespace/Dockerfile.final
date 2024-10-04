@@ -1,21 +1,20 @@
-# Use multi-stage builds to inherit from both mega and zsh images
-FROM local/mega_image:latest as mega
-FROM local/zsh_image:latest
+# Use the base image as the starting point
+FROM local/base_image:latest
 
 # Copy MEGA CMD from the mega stage
-COPY --from=mega /usr/bin/mega-* /usr/bin/
-COPY --from=mega /usr/share/mega* /usr/share/
+COPY --from=local/mega_image:latest /usr/bin/mega-* /usr/bin/
+COPY --from=local/mega_image:latest /usr/share/mega* /usr/share/
 
 # Copy ZSH configurations from the zsh stage
-COPY --from=zsh /root/.oh-my-zsh /root/.oh-my-zsh
-COPY --from=zsh /root/.zshrc /root/.zshrc
+COPY --from=local/zsh_image:latest /root/.oh-my-zsh /root/.oh-my-zsh
+COPY --from=local/zsh_image:latest /root/.zshrc /root/.zshrc
 
 # Copy scripts
 COPY *.sh /codespace/
 RUN find /codespace -name "*.sh" -exec chmod +x {} \;
 
 # Verify MEGA CMD and zsh installations
-RUN which mega-cmd || echo "mega-cmd not found" && which zsh || echo "zsh not found"
+RUN which mega-cmd || echo "[WADUH] mega-cmd not found" && which zsh || echo "[WADUH] zsh not found"
 
 EXPOSE 5901 5902 5903 8080
 

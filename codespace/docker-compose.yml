@@ -1,37 +1,31 @@
-version: '3'
-
 services:
   base:
     build:
-      context:
+      context: .
       dockerfile: Dockerfile.base
-      no_cache: true
-    image: local/base_image: latest
+    image: local/base_image:latest
 
   mega:
     build:
-      context:
+      context: .
       dockerfile: Dockerfile.mega
-      no_cache: true
-    image: local/mega_image: latest
+    image: local/mega_image:latest
     depends_on:
       - base
 
   zsh:
     build:
-      context:
+      context: .
       dockerfile: Dockerfile.zsh
-      no_cache: true
     image: local/zsh_image:latest
     depends_on:
       - base
 
   final:
     build:
-      context:
+      context: .
       dockerfile: Dockerfile.final
-      no_cache: true
-    image: local/final_image: latest
+    image: local/final_image:latest
     depends_on:
       - base
       - mega
@@ -41,9 +35,9 @@ services:
     environment:
       - MEGA_EMAIL
       - MEGA_PASSWORD
-      - VNC_PASSWORD=1234  # Passed the VNC password
+      - VNC_PASSWORD=1234
     ports:
       - "5901:5901"
-      - "5902:5902"  # For TightVNC
-      - "5903:5903"  # For TigerVNC
-      - "8080:8080"  # noVNC
+      - "5902:5902"
+      - "5903:5903"
+      - "8080:8080"

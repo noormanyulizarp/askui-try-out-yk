@@ -1,5 +1,8 @@
 FROM local/base_image:latest
 
+# Install zsh
+RUN apt-get update && apt-get install -y zsh
+
 # Install Oh My Zsh, plugins, and set theme
 RUN if [ ! -d "$HOME/.oh-my-zsh" ]; then \
         # Install Oh My Zsh unattended
@@ -18,6 +21,9 @@ RUN if [ ! -d "$HOME/.oh-my-zsh" ]; then \
     # Add custom aliases
     echo 'alias gst="git status"' >> ~/.zshrc && \
     echo 'alias ll="ls -la"' >> ~/.zshrc
+
+# Verify zsh installation
+RUN which zsh || echo "zsh not found"
 
 # Start zsh shell
 CMD ["/bin/zsh"]

@@ -21,6 +21,7 @@ services:
     build:
       context:
       dockerfile: Dockerfile.zsh
+      no_cache: true
     image: local/zsh_image:latest
     depends_on:
       - base

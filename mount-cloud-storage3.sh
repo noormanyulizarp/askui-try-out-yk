@@ -104,27 +104,6 @@ EOF
     log_message "INFO" "Desktop shortcut created at $shortcut_path."
 }
 
-# Check for MEGA CMD update
-check_for_mega_update() {
-    log_message "INFO" "Checking for MEGA CMD updates..."
-    local current_version
-    current_version=$(mega-cmd --version | grep 'MEGA CMD version' || echo "Unknown")
-    local latest_version
-    latest_version=$(curl -s https://mega.nz/linux/repo/xUbuntu_22.10/amd64/Packages | grep 'Version:' | awk '{print $2}' | head -1)
-    if [[ "$current_version" != "$latest_version" && -n "$latest_version" ]]; then
-        log_message "INFO" "Updating MEGA CMD to latest version ($latest_version)..."
-        local tmp_dir
-        tmp_dir=$(mktemp -d)
-        wget -q https://mega.nz/linux/repo/xUbuntu_22.10/amd64/megacmd-xUbuntu_22.10_amd64.deb -O "$tmp_dir/megacmd.deb"
-        dpkg -i "$tmp_dir/megacmd.deb"
-        apt-get -f install -y
-        rm -rf "$tmp_dir"
-        log_message "INFO" "MEGA CMD updated successfully to version $latest_version."
-    else
-        log_message "INFO" "MEGA CMD is already up to date."
-    fi
-}
-
 # Check network connectivity
 check_network() {
     if ! ping -c 1 google.com &> /dev/null; then
@@ -153,5 +132,4 @@ configure_mega
 mount_mega
 sync_mega
 create_desktop_shortcut
-check_for_mega_update
 log_message "INFO" "MEGA setup completed successfully."

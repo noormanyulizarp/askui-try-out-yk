@@ -135,7 +135,7 @@ configure_pcloud() {
     fi
 
     log_message "Configuring pCloud..."
-    
+
     # Login and save password
     echo "$PCLOUD_PASSWORD" | pcloudcc -u "$PCLOUD_EMAIL" -p -s
     if [ $? -ne 0 ]; then
@@ -144,20 +144,50 @@ configure_pcloud() {
     fi
     
     log_message "pCloud configured successfully"
+
+    # Check sync status and wait for it to be READY
+    log_message "Waiting for pCloud sync to complete..."
+    local sync_status="SCANNING"
+    while [ "$sync_status" != "READY" ]; do
+        sleep 5
+        # Get the current sync status
+        sync_status=$(pcloudcc status | grep -oP 'status is \K\w+')
+        log_message "Current sync status: $sync_status"
+        if [ "$sync_status" == "ERROR" ]; then
+            log_message "Error: Sync encountered an issue."
+            exit 1
+        fi
+    done
+
+    log_message "pCloud sync completed successfully. Status is READY."
 }
 
 # Function to mount pCloud
 mount_pcloud() {
     local mount_point="${1:-/workspace/pcloud}"
-    
+
+    # Check if user is in fuse group
+    if ! groups $USER | grep -q '\bfuse\b'; then
+        log_message "Warning: User is not in the fuse group. Adding user to fuse group..."
+        sudo usermod -aG fuse $USER
+        log_message "You need to log out and log back in for this change to take effect."
+        exit 1
+    fi
+
     if ! mountpoint -q "$mount_point"; then
         log_message "Creating mount point at $mount_point..."
         mkdir -p "$mount_point"
         
-        log_message "Starting pCloud daemon..."
-        pcloudcc -u "$PCLOUD_EMAIL" -d -m "$mount_point"
+        log_message "Starting pCloud mount with FUSE..."
+
+        # Mount pCloud using FUSE and capture verbose output
+        sudo mount -t fuse pcloud "$mount_point" -o allow_other,default_permissions,debug
+        if [ $? -ne 0 ]; then
+            log_message "Error: Failed to mount pCloud. Check logs for FUSE errors."
+            exit 1
+        fi
         
-        # Wait for mount to complete
+        # Wait for mount to complete and check status
         local max_wait=30
         local wait_time=0
         while ! mountpoint -q "$mount_point"; do

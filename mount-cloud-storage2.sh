@@ -22,6 +22,10 @@ cleanup() {
         log_message "Removing build directory: $BUILD_DIR"
         rm -rf "$BUILD_DIR"
     fi
+    if mountpoint -q "$MOUNT_POINT"; then
+        log_message "Unmounting pCloud..."
+        sudo fusermount -u "$MOUNT_POINT" || sudo umount -l "$MOUNT_POINT"
+    fi
     log_message "Cleanup completed."
 }
 

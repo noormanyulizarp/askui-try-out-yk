@@ -27,6 +27,17 @@ tasks:
       sudo apt-get update
       sudo apt-get install -y python3-pip
       pip3 install bpytop --upgrade
+
+      # Install Git Delta
+      echo "Installing Git Delta..."
+      sudo apt-get install -y git-delta
+
+      # Configure Git to use Delta
+      echo "Configuring Git to use Delta..."
+      git config --global core.pager "delta"
+      git config --global delta.side-by-side true
+      git config --global delta.line-numbers true
+      git config --global delta.syntax-theme "GitHub"
       
       # Switch to Zsh as the default shell
       exec zsh

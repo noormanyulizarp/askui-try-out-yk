@@ -123,7 +123,7 @@ configure_pcloud() {
 
     log_message "Configuring pCloud..."
 
-    # Login to pCloud
+    # Login and save password
     echo "$PCLOUD_PASSWORD" | pcloudcc -u "$PCLOUD_EMAIL" -p -s
     if [ $? -ne 0 ]; then
         log_message "Error: Failed to configure pCloud. Please check your credentials."
@@ -131,28 +131,6 @@ configure_pcloud() {
     fi
 
     log_message "pCloud configured successfully."
-
-    # Wait for sync to complete with a timeout
-    local timeout=300  # 5 minutes
-    local start_time=$(date +%s)
-    log_message "Waiting for pCloud sync to complete (timeout: $timeout seconds)..."
-    local sync_status="SCANNING"
-    while [ "$sync_status" != "READY" ]; do
-        sleep 5
-        sync_status=$(pcloudcc status | grep -oP 'status is \K\w+')
-        log_message "Current sync status: $sync_status"
-        if [ "$sync_status" == "ERROR" ]; then
-            log_message "Error: Sync encountered an issue."
-            exit 1
-        fi
-        # Check if timeout has been reached
-        if [ $(($(date +%s) - start_time)) -ge $timeout ]; then
-            log_message "Error: Sync timed out after $timeout seconds."
-            exit 1
-        fi
-    done
-
-    log_message "pCloud sync completed successfully. Status is READY."
 }
 
 # Function to mount pCloud
@@ -186,7 +164,7 @@ mount_pcloud() {
 
     # Start the pCloud client
     log_message "Mounting pCloud to $MOUNT_POINT..."
-    echo "$PCLOUD_PASSWORD" | sudo -E pcloudcc --username "$PCLOUD_EMAIL" --password --mountpoint "$MOUNT_POINT"
+    pcloudcc --username "$PCLOUD_EMAIL" --mountpoint "$MOUNT_POINT"
 
     # Check if the drive is mounted
     if mount | grep -q "$MOUNT_POINT"; then
@@ -215,6 +193,17 @@ EOF
     log_message "Desktop shortcut created successfully."
 }
 
+# Function to verify mount status
+verify_mount_status() {
+    log_message "Verifying mount status..."
+    if mount | grep -q "$MOUNT_POINT"; then
+        log_message "Mount verification successful: pCloud is mounted at $MOUNT_POINT."
+    else
+        log_message "Mount verification failed: pCloud is not mounted."
+        exit 1
+    fi
+}
+
 # Main execution
 log_message "Starting pCloud setup script v$VERSION..."
 
@@ -232,6 +221,7 @@ fi
 
 configure_pcloud
 mount_pcloud
+verify_mount_status  # Verify mount status automatically
 create_desktop_shortcut
 
 log_message "pCloud setup completed successfully."

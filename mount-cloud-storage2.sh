@@ -25,6 +25,17 @@ log_message() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
 }
 
+# Function to check disk space
+check_disk_space() {
+    local required_space=1000000  # 1GB in KB
+    local available_space=$(df /tmp -k | awk 'NR==2 {print $4}')
+    if [ "$available_space" -lt "$required_space" ]; then
+        log_message "Error: Insufficient disk space. Required: 1GB, Available: $((available_space/1024))MB"
+        exit 1
+    fi
+    log_message "Disk space check passed"
+}
+
 # Function to check and install dependencies
 install_dependencies() {
     log_message "Installing required dependencies..."
@@ -41,7 +52,6 @@ install_dependencies() {
         "fuse"
         "build-essential"
         "git"
-        "expect"  # Added expect for non-interactive authentication
     )
 
     # Include libfuse2 if running on Ubuntu 22.04
@@ -70,6 +80,9 @@ install_dependencies() {
 build_from_source() {
     log_message "Building pCloud console client from source..."
     
+    # Check disk space before building
+    check_disk_space
+    
     # Set up build directory
     mkdir -p "$BUILD_DIR" && cd "$BUILD_DIR"
     
@@ -83,6 +96,14 @@ build_from_source() {
     cd lib/pclsync/ && make clean && make fs
     if [ $? -ne 0 ]; then
         log_message "Error: Failed to build pCloud sync library"
+        exit 1
+    fi
+
+    # Build mbedtls
+    log_message "Building mbedtls..."
+    cd ../mbedtls/ && cmake . && make clean && make
+    if [ $? -ne 0 ]; then
+        log_message "Error: Failed to build mbedtls"
         exit 1
     fi
 
@@ -101,7 +122,7 @@ build_from_source() {
     log_message "pCloud console client built and installed successfully"
 }
 
-# Function to configure pCloud with non-interactive authentication
+# Function to configure pCloud
 configure_pcloud() {
     if ! command -v pcloudcc &> /dev/null; then
         log_message "Error: pcloudcc not found. Installation failed."
@@ -115,25 +136,30 @@ configure_pcloud() {
 
     log_message "Configuring pCloud..."
 
-    # Use expect for non-interactive authentication
-    /usr/bin/expect <<EOF
-    spawn pcloudcc -u "$PCLOUD_EMAIL" -p
-    expect "Password:"
-    send "$PCLOUD_PASSWORD\r"
-    expect eof
-EOF
-
-    # Verify sync status
-    log_message "Checking pCloud sync status..."
-    local sync_status=$(pcloudcc status | grep -oP 'status is \K\w+')
-    log_message "Current sync status: $sync_status"
-
-    if [ "$sync_status" == "ERROR" ]; then
-        log_message "Error: Sync encountered an issue."
+    # Login and save password
+    echo "$PCLOUD_PASSWORD" | pcloudcc -u "$PCLOUD_EMAIL" -p -s
+    if [ $? -ne 0 ]; then
+        log_message "Error: Failed to configure pCloud"
         exit 1
     fi
-
+    
     log_message "pCloud configured successfully"
+
+    # Check sync status and wait for it to be READY
+    log_message "Waiting for pCloud sync to complete..."
+    local sync_status="SCANNING"
+    while [ "$sync_status" != "READY" ]; do
+        sleep 5
+        # Get the current sync status
+        sync_status=$(pcloudcc status | grep -oP 'status is \K\w+')
+        log_message "Current sync status: $sync_status"
+        if [ "$sync_status" == "ERROR" ]; then
+            log_message "Error: Sync encountered an issue."
+            exit 1
+        fi
+    done
+
+    log_message "pCloud sync completed successfully. Status is READY."
 }
 
 # Function to mount pCloud
@@ -154,17 +180,48 @@ mount_pcloud() {
         
         log_message "Starting pCloud mount with FUSE..."
 
-        # Mount pCloud using FUSE
-        pcloudcc -m "$mount_point"
+        # Mount pCloud using FUSE and capture verbose output
+        sudo mount -t fuse pcloud "$mount_point" -o allow_other,default_permissions,debug
         if [ $? -ne 0 ]; then
-            log_message "Error: Failed to mount pCloud."
+            log_message "Error: Failed to mount pCloud. Check logs for FUSE errors."
             exit 1
         fi
+        
+        # Wait for mount to complete and check status
+        local max_wait=30
+        local wait_time=0
+        while ! mountpoint -q "$mount_point"; do
+            sleep 1
+            ((wait_time++))
+            if [ $wait_time -ge $max_wait ]; then
+                log_message "Error: Mount timeout after ${max_wait} seconds"
+                exit 1
+            fi
+            log_message "Waiting for mount... ($wait_time/$max_wait seconds)"
+        done
         
         log_message "pCloud mounted successfully at $mount_point"
     else
         log_message "pCloud is already mounted at $mount_point"
     fi
+}
+
+# Function to create desktop shortcut
+create_desktop_shortcut() {
+    log_message "Creating desktop shortcut..."
+    mkdir -p /home/gitpod/Desktop
+    cat <<EOF > /home/gitpod/Desktop/pCloud.desktop
+[Desktop Entry]
+Name=pCloud
+Comment=Access your pCloud storage
+Exec=nautilus /workspace/pcloud
+Icon=folder
+Terminal=false
+Type=Application
+Categories=Utility;
+EOF
+    chmod +x /home/gitpod/Desktop/pCloud.desktop
+    log_message "Desktop shortcut created successfully"
 }
 
 # Main execution
@@ -187,5 +244,6 @@ fi
 
 configure_pcloud
 mount_pcloud "/workspace/pcloud"
+create_desktop_shortcut
 
 log_message "pCloud setup completed successfully"

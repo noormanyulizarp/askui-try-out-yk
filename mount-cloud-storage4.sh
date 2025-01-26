@@ -162,45 +162,6 @@ configure_pcloud() {
     log_message "pCloud sync completed successfully. Status is READY."
 }
 
-# Function to mount pCloud drive
-mount_pcloud_drive() {
-    local mount_point="/home/gitpod/pCloudDrive"
-
-    # Check if environment variables are set
-    if [ -z "$PCLOUD_EMAIL" ] || [ -z "$PCLOUD_PASSWORD" ]; then
-        log_message "Error: PCLOUD_EMAIL and PCLOUD_PASSWORD must be set."
-        exit 1
-    fi
-
-    # Create mount point if it doesn't exist
-    mkdir -p "$mount_point"
-
-    # Check mount point permissions
-    if ! ls -ld "$mount_point" | grep -q "drwxr-xr-x"; then
-        log_message "Fixing mount point permissions..."
-        sudo chown gitpod:gitpod "$mount_point"
-        chmod 755 "$mount_point"
-    fi
-
-    # Unmount any stale mounts
-    if mount | grep -q "$mount_point"; then
-        log_message "Unmounting stale mount..."
-        sudo fusermount -u "$mount_point"
-    fi
-
-    # Start the pCloud client
-    log_message "Starting pCloud client..."
-    echo "$PCLOUD_PASSWORD" | sudo -E pcloudcc --username "$PCLOUD_EMAIL" --password --mountpoint "$mount_point"
-
-    # Check if the drive is mounted
-    if mount | grep -q "$mount_point"; then
-        log_message "pCloudDrive is mounted successfully at $mount_point."
-    else
-        log_message "Failed to mount pCloudDrive. Check the logs for errors."
-        exit 1
-    fi
-}
-
 # Function to mount pCloud
 mount_pcloud() {
     local mount_point="${1:-/workspace/pcloud}"
@@ -282,7 +243,6 @@ else
 fi
 
 configure_pcloud
-mount_pcloud_drive  # Mount pCloud drive
 mount_pcloud "/workspace/pcloud"
 create_desktop_shortcut
 

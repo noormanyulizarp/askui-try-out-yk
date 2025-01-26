@@ -11,12 +11,18 @@ trap cleanup EXIT
 # Global variables
 BUILD_DIR="/tmp/pcloud-build"
 BUILD_FROM_SOURCE=${BUILD_FROM_SOURCE:-true}
+RCLONE_REMOTE="pcloud"  # Name of the rclone remote
+MOUNT_POINT="/workspace/pcloud"
 
 # Cleanup function
 cleanup() {
     if [ -d "$BUILD_DIR" ]; then
         log_message "Cleaning up build directory..."
         rm -rf "$BUILD_DIR"
+    fi
+    if mountpoint -q "$MOUNT_POINT"; then
+        log_message "Unmounting pCloud..."
+        fusermount -u "$MOUNT_POINT"
     fi
 }
 
@@ -70,6 +76,14 @@ install_dependencies() {
     
     if [ $? -ne 0 ]; then
         log_message "Error: Failed to install dependencies"
+        exit 1
+    fi
+
+    # Install rclone
+    log_message "Installing rclone..."
+    curl https://rclone.org/install.sh | sudo bash
+    if [ $? -ne 0 ]; then
+        log_message "Error: Failed to install rclone"
         exit 1
     fi
     
@@ -144,123 +158,17 @@ configure_pcloud() {
     fi
     
     log_message "pCloud configured successfully"
-
-    # Check sync status and wait for it to be READY
-    log_message "Waiting for pCloud sync to complete..."
-    local sync_status="SCANNING"
-    while [ "$sync_status" != "READY" ]; do
-        sleep 5
-        # Get the current sync status
-        sync_status=$(pcloudcc status | grep -oP 'status is \K\w+')
-        log_message "Current sync status: $sync_status"
-        if [ "$sync_status" == "ERROR" ]; then
-            log_message "Error: Sync encountered an issue."
-            exit 1
-        fi
-    done
-
-    log_message "pCloud sync completed successfully. Status is READY."
 }
 
-# Function to mount pCloud drive
-mount_pcloud_drive() {
-    local mount_point="/home/gitpod/pCloudDrive"
-
-    # Check if environment variables are set
-    if [ -z "$PCLOUD_EMAIL" ] || [ -z "$PCLOUD_PASSWORD" ]; then
-        log_message "Error: PCLOUD_EMAIL and PCLOUD_PASSWORD must be set."
+# Function to sync pCloud using rclone
+sync_pcloud() {
+    log_message "Syncing pCloud using rclone..."
+    rclone sync "$RCLONE_REMOTE":/ "$MOUNT_POINT" --vfs-cache-mode full
+    if [ $? -ne 0 ]; then
+        log_message "Error: Failed to sync pCloud using rclone"
         exit 1
     fi
-
-    # Create mount point if it doesn't exist
-    mkdir -p "$mount_point"
-
-    # Check mount point permissions
-    if ! ls -ld "$mount_point" | grep -q "drwxr-xr-x"; then
-        log_message "Fixing mount point permissions..."
-        sudo chown gitpod:gitpod "$mount_point"
-        chmod 755 "$mount_point"
-    fi
-
-    # Unmount any stale mounts
-    if mount | grep -q "$mount_point"; then
-        log_message "Unmounting stale mount..."
-        sudo fusermount -u "$mount_point"
-    fi
-
-    # Start the pCloud client
-    log_message "Starting pCloud client..."
-    echo "$PCLOUD_PASSWORD" | sudo -E pcloudcc --username "$PCLOUD_EMAIL" --password --mountpoint "$mount_point"
-
-    # Check if the drive is mounted
-    if mount | grep -q "$mount_point"; then
-        log_message "pCloudDrive is mounted successfully at $mount_point."
-    else
-        log_message "Failed to mount pCloudDrive. Check the logs for errors."
-        exit 1
-    fi
-}
-
-# Function to mount pCloud
-mount_pcloud() {
-    local mount_point="${1:-/workspace/pcloud}"
-
-    # Check if user is in fuse group
-    if ! groups $USER | grep -q '\bfuse\b'; then
-        log_message "Warning: User is not in the fuse group. Adding user to fuse group..."
-        sudo usermod -aG fuse $USER
-        log_message "You need to log out and log back in for this change to take effect."
-        exit 1
-    fi
-
-    if ! mountpoint -q "$mount_point"; then
-        log_message "Creating mount point at $mount_point..."
-        mkdir -p "$mount_point"
-        
-        log_message "Starting pCloud mount with FUSE..."
-
-        # Mount pCloud using FUSE and capture verbose output
-        sudo mount -t fuse pcloud "$mount_point" -o allow_other,default_permissions,debug
-        if [ $? -ne 0 ]; then
-            log_message "Error: Failed to mount pCloud. Check logs for FUSE errors."
-            exit 1
-        fi
-        
-        # Wait for mount to complete and check status
-        local max_wait=30
-        local wait_time=0
-        while ! mountpoint -q "$mount_point"; do
-            sleep 1
-            ((wait_time++))
-            if [ $wait_time -ge $max_wait ]; then
-                log_message "Error: Mount timeout after ${max_wait} seconds"
-                exit 1
-            fi
-            log_message "Waiting for mount... ($wait_time/$max_wait seconds)"
-        done
-        
-        log_message "pCloud mounted successfully at $mount_point"
-    else
-        log_message "pCloud is already mounted at $mount_point"
-    fi
-}
-
-# Function to create desktop shortcut
-create_desktop_shortcut() {
-    log_message "Creating desktop shortcut..."
-    mkdir -p /home/gitpod/Desktop
-    cat <<EOF > /home/gitpod/Desktop/pCloud.desktop
-[Desktop Entry]
-Name=pCloud
-Comment=Access your pCloud storage
-Exec=nautilus /workspace/pcloud
-Icon=folder
-Terminal=false
-Type=Application
-Categories=Utility;
-EOF
-    chmod +x /home/gitpod/Desktop/pCloud.desktop
-    log_message "Desktop shortcut created successfully"
+    log_message "pCloud sync completed successfully."
 }
 
 # Main execution
@@ -282,8 +190,6 @@ else
 fi
 
 configure_pcloud
-mount_pcloud_drive  # Mount pCloud drive
-mount_pcloud "/workspace/pcloud"
-create_desktop_shortcut
+sync_pcloud
 
 log_message "pCloud setup completed successfully"

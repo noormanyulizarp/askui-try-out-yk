@@ -1,28 +1,49 @@
 #!/bin/bash
 
-VERSION="1.0.0"
+VERSION="1.1.0"
 
 # Exit on error
 set -e
 
 # Cleanup handler
-trap cleanup EXIT
+trap cleanup EXIT SIGINT SIGTERM
 
 # Global variables
 BUILD_DIR="/tmp/pcloud-build"
 BUILD_FROM_SOURCE=${BUILD_FROM_SOURCE:-true}
+MOUNT_POINT="/workspace/pcloud"  # Local mount point
+LOG_FILE="/var/log/pcloud-setup.log"
+SERVICE_NAME="pcloudcc.service"
 
 # Cleanup function
 cleanup() {
+    log_message "Cleaning up..."
     if [ -d "$BUILD_DIR" ]; then
-        log_message "Cleaning up build directory..."
+        log_message "Removing build directory: $BUILD_DIR"
         rm -rf "$BUILD_DIR"
     fi
+    log_message "Cleanup completed."
 }
 
 # Logging function
 log_message() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
+    local message="$(date '+%Y-%m-%d %H:%M:%S') - $1"
+    echo "$message" | tee -a "$LOG_FILE"
+}
+
+# Function to verify pCloud credentials
+verify_credentials() {
+    if [ -z "$PCLOUD_EMAIL" ]; then
+        log_message "Error: PCLOUD_EMAIL is not set. Please set the PCLOUD_EMAIL environment variable."
+        exit 1
+    fi
+
+    if [ -z "$PCLOUD_PASSWORD" ]; then
+        log_message "Error: PCLOUD_PASSWORD is not set. Please set the PCLOUD_PASSWORD environment variable."
+        exit 1
+    fi
+
+    log_message "pCloud credentials verified successfully."
 }
 
 # Function to check disk space
@@ -33,14 +54,13 @@ check_disk_space() {
         log_message "Error: Insufficient disk space. Required: 1GB, Available: $((available_space/1024))MB"
         exit 1
     fi
-    log_message "Disk space check passed"
+    log_message "Disk space check passed."
 }
 
-# Function to check and install dependencies
+# Function to install dependencies
 install_dependencies() {
     log_message "Installing required dependencies..."
-    
-    # List of required packages
+
     DEPS=(
         "cmake"
         "zlib1g-dev"
@@ -54,72 +74,40 @@ install_dependencies() {
         "git"
     )
 
-    # Include libfuse2 if running on Ubuntu 22.04
     if grep -q "Ubuntu 22.04" /etc/os-release; then
         log_message "Ubuntu 22.04 detected, adding libfuse2 to dependencies..."
         DEPS+=("libfuse2")
         sudo add-apt-repository universe -y
     fi
 
-    # Update package list and install dependencies
-    log_message "Updating package list..."
     sudo apt-get update
-
-    log_message "Installing ${#DEPS[@]} packages..."
     sudo apt-get install -y "${DEPS[@]}"
-    
-    if [ $? -ne 0 ]; then
-        log_message "Error: Failed to install dependencies"
-        exit 1
-    fi
-    
-    log_message "Dependencies installed successfully"
+    log_message "Dependencies installed successfully."
 }
 
 # Function to build pCloud from source
 build_from_source() {
     log_message "Building pCloud console client from source..."
-    
-    # Check disk space before building
+
     check_disk_space
-    
-    # Set up build directory
     mkdir -p "$BUILD_DIR" && cd "$BUILD_DIR"
-    
-    # Clone the repository
+
     log_message "Cloning pCloud console client repository..."
     git clone https://github.com/pcloudcom/console-client.git
     cd console-client/pCloudCC/
-    
-    # Build pCloud sync library
+
     log_message "Building pCloud sync library..."
-    cd lib/pclsync/ && make clean && make fs
-    if [ $? -ne 0 ]; then
-        log_message "Error: Failed to build pCloud sync library"
-        exit 1
-    fi
+    cd lib/pclsync/ && make clean && make fs || { log_message "Error: Failed to build pCloud sync library"; exit 1; }
 
-    # Build mbedtls
     log_message "Building mbedtls..."
-    cd ../mbedtls/ && cmake . && make clean && make
-    if [ $? -ne 0 ]; then
-        log_message "Error: Failed to build mbedtls"
-        exit 1
-    fi
+    cd ../mbedtls/ && cmake . && make clean && make || { log_message "Error: Failed to build mbedtls"; exit 1; }
 
-    # Build main application
     log_message "Building main application..."
-    cd ../.. && cmake . && make
-    if [ $? -ne 0 ]; then
-        log_message "Error: Failed to build pCloud console client"
-        exit 1
-    fi
+    cd ../.. && cmake . && make || { log_message "Error: Failed to build pCloud console client"; exit 1; }
 
-    # Install the built application
     log_message "Installing pCloud console client..."
     sudo make install && sudo ldconfig
-    
-    log_message "pCloud console client built and installed successfully"
+    log_message "pCloud console client built and installed successfully."
 }
 
 # Function to configure pCloud
@@ -128,33 +116,34 @@ configure_pcloud() {
         log_message "Error: pcloudcc not found. Installation failed."
         exit 1
     fi
-    
-    if [ -z "$PCLOUD_EMAIL" ] || [ -z "$PCLOUD_PASSWORD" ]; then
-        log_message "Error: pCloud credentials not set. Please set PCLOUD_EMAIL and PCLOUD_PASSWORD"
-        exit 1
-    fi
 
     log_message "Configuring pCloud..."
 
-    # Login and save password
+    # Login to pCloud
     echo "$PCLOUD_PASSWORD" | pcloudcc -u "$PCLOUD_EMAIL" -p -s
     if [ $? -ne 0 ]; then
-        log_message "Error: Failed to configure pCloud"
+        log_message "Error: Failed to configure pCloud. Please check your credentials."
         exit 1
     fi
-    
-    log_message "pCloud configured successfully"
 
-    # Check sync status and wait for it to be READY
-    log_message "Waiting for pCloud sync to complete..."
+    log_message "pCloud configured successfully."
+
+    # Wait for sync to complete with a timeout
+    local timeout=300  # 5 minutes
+    local start_time=$(date +%s)
+    log_message "Waiting for pCloud sync to complete (timeout: $timeout seconds)..."
     local sync_status="SCANNING"
     while [ "$sync_status" != "READY" ]; do
         sleep 5
-        # Get the current sync status
         sync_status=$(pcloudcc status | grep -oP 'status is \K\w+')
         log_message "Current sync status: $sync_status"
         if [ "$sync_status" == "ERROR" ]; then
             log_message "Error: Sync encountered an issue."
+            exit 1
+        fi
+        # Check if timeout has been reached
+        if [ $(($(date +%s) - start_time)) -ge $timeout ]; then
+            log_message "Error: Sync timed out after $timeout seconds."
             exit 1
         fi
     done
@@ -162,49 +151,8 @@ configure_pcloud() {
     log_message "pCloud sync completed successfully. Status is READY."
 }
 
-# Function to mount pCloud drive
-mount_pcloud_drive() {
-    local mount_point="/home/gitpod/pCloudDrive"
-
-    # Check if environment variables are set
-    if [ -z "$PCLOUD_EMAIL" ] || [ -z "$PCLOUD_PASSWORD" ]; then
-        log_message "Error: PCLOUD_EMAIL and PCLOUD_PASSWORD must be set."
-        exit 1
-    fi
-
-    # Create mount point if it doesn't exist
-    mkdir -p "$mount_point"
-
-    # Check mount point permissions
-    if ! ls -ld "$mount_point" | grep -q "drwxr-xr-x"; then
-        log_message "Fixing mount point permissions..."
-        sudo chown gitpod:gitpod "$mount_point"
-        chmod 755 "$mount_point"
-    fi
-
-    # Unmount any stale mounts
-    if mount | grep -q "$mount_point"; then
-        log_message "Unmounting stale mount..."
-        sudo fusermount -u "$mount_point"
-    fi
-
-    # Start the pCloud client
-    log_message "Starting pCloud client..."
-    echo "$PCLOUD_PASSWORD" | sudo -E pcloudcc --username "$PCLOUD_EMAIL" --password --mountpoint "$mount_point"
-
-    # Check if the drive is mounted
-    if mount | grep -q "$mount_point"; then
-        log_message "pCloudDrive is mounted successfully at $mount_point."
-    else
-        log_message "Failed to mount pCloudDrive. Check the logs for errors."
-        exit 1
-    fi
-}
-
 # Function to mount pCloud
 mount_pcloud() {
-    local mount_point="${1:-/workspace/pcloud}"
-
     # Check if user is in fuse group
     if ! groups $USER | grep -q '\bfuse\b'; then
         log_message "Warning: User is not in the fuse group. Adding user to fuse group..."
@@ -213,64 +161,61 @@ mount_pcloud() {
         exit 1
     fi
 
-    if ! mountpoint -q "$mount_point"; then
-        log_message "Creating mount point at $mount_point..."
-        mkdir -p "$mount_point"
-        
-        log_message "Starting pCloud mount with FUSE..."
+    # Create mount point if it doesn't exist
+    if [ ! -d "$MOUNT_POINT" ]; then
+        log_message "Creating mount point at $MOUNT_POINT..."
+        mkdir -p "$MOUNT_POINT"
+    fi
 
-        # Mount pCloud using FUSE and capture verbose output
-        sudo mount -t fuse pcloud "$mount_point" -o allow_other,default_permissions,debug
-        if [ $? -ne 0 ]; then
-            log_message "Error: Failed to mount pCloud. Check logs for FUSE errors."
-            exit 1
-        fi
-        
-        # Wait for mount to complete and check status
-        local max_wait=30
-        local wait_time=0
-        while ! mountpoint -q "$mount_point"; do
-            sleep 1
-            ((wait_time++))
-            if [ $wait_time -ge $max_wait ]; then
-                log_message "Error: Mount timeout after ${max_wait} seconds"
-                exit 1
-            fi
-            log_message "Waiting for mount... ($wait_time/$max_wait seconds)"
-        done
-        
-        log_message "pCloud mounted successfully at $mount_point"
+    # Check mount point permissions
+    if ! ls -ld "$MOUNT_POINT" | grep -q "drwxr-xr-x"; then
+        log_message "Fixing mount point permissions..."
+        sudo chown $USER:$USER "$MOUNT_POINT"
+        chmod 755 "$MOUNT_POINT"
+    fi
+
+    # Unmount any stale mounts
+    if mount | grep -q "$MOUNT_POINT"; then
+        log_message "Unmounting stale mount..."
+        sudo fusermount -u "$MOUNT_POINT" || sudo umount -l "$MOUNT_POINT"
+    fi
+
+    # Start the pCloud client
+    log_message "Mounting pCloud to $MOUNT_POINT..."
+    echo "$PCLOUD_PASSWORD" | sudo -E pcloudcc --username "$PCLOUD_EMAIL" --password --mountpoint "$MOUNT_POINT"
+
+    # Check if the drive is mounted
+    if mount | grep -q "$MOUNT_POINT"; then
+        log_message "pCloud is mounted successfully at $MOUNT_POINT."
     else
-        log_message "pCloud is already mounted at $mount_point"
+        log_message "Failed to mount pCloud. Check the logs for errors."
+        exit 1
     fi
 }
 
 # Function to create desktop shortcut
 create_desktop_shortcut() {
     log_message "Creating desktop shortcut..."
-    mkdir -p /home/gitpod/Desktop
-    cat <<EOF > /home/gitpod/Desktop/pCloud.desktop
+    mkdir -p /home/$USER/Desktop
+    cat <<EOF > /home/$USER/Desktop/pCloud.desktop
 [Desktop Entry]
 Name=pCloud
 Comment=Access your pCloud storage
-Exec=nautilus /workspace/pcloud
+Exec=nautilus $MOUNT_POINT
 Icon=folder
 Terminal=false
 Type=Application
 Categories=Utility;
 EOF
-    chmod +x /home/gitpod/Desktop/pCloud.desktop
-    log_message "Desktop shortcut created successfully"
+    chmod +x /home/$USER/Desktop/pCloud.desktop
+    log_message "Desktop shortcut created successfully."
 }
 
 # Main execution
 log_message "Starting pCloud setup script v$VERSION..."
 
-# Ensure environment variables are set
-if [ -z "$PCLOUD_EMAIL" ] || [ -z "$PCLOUD_PASSWORD" ]; then
-    log_message "Error: Please set PCLOUD_EMAIL and PCLOUD_PASSWORD environment variables"
-    exit 1
-fi
+# Verify pCloud credentials
+verify_credentials
 
 # Run setup steps
 install_dependencies
@@ -278,12 +223,11 @@ install_dependencies
 if [ "$BUILD_FROM_SOURCE" = true ]; then
     build_from_source
 else
-    log_message "Skipping source build (BUILD_FROM_SOURCE=false)"
+    log_message "Skipping source build (BUILD_FROM_SOURCE=false)."
 fi
 
 configure_pcloud
-mount_pcloud_drive  # Mount pCloud drive
-mount_pcloud "/workspace/pcloud"
+mount_pcloud
 create_desktop_shortcut
 
-log_message "pCloud setup completed successfully"
+log_message "pCloud setup completed successfully."

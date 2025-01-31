@@ -103,8 +103,14 @@ dist
 # TernJS port file
 .tern-port
 
-#.JetBrains
+# JetBrains IDE specific files
 .idea/
 
-#CloudStorage
+# Cloud Storage
 mega/
+
+# macOS specific files
+.DS_Store
+
+# Windows specific files
+Thumbs.db

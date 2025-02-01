@@ -37,9 +37,16 @@ install_dependencies() {
     sudo apt-get install -y "${DEPS[@]}"
 }
 
-clone_pcloudcc_repo() {
-    log_message "Cloning pCloud console client repository..."
-    git clone https://github.com/pcloudcom/console-client.git ~/console-client
+check_and_clone_pcloudcc_repo() {
+    log_message "Checking if pCloud console client repository exists..."
+
+    # Check if the console-client directory already exists
+    if [ -d "$HOME/console-client" ]; then
+        log_message "console-client directory already exists. Skipping clone."
+    else
+        log_message "Cloning pCloud console client repository..."
+        git clone https://github.com/pcloudcom/console-client.git ~/console-client
+    fi
     cd ~/console-client/pCloudCC/
 }
 
@@ -126,7 +133,7 @@ EOF
 
 log_message "Starting pCloud setup v$VERSION..."
 install_dependencies
-[ "$BUILD_FROM_SOURCE" = true ] && { clone_pcloudcc_repo; build_pcloudcc; }
+[ "$BUILD_FROM_SOURCE" = true ] && { check_and_clone_pcloudcc_repo; build_pcloudcc; }
 configure_pcloud
 mount_pcloud
 sync_shared_folders

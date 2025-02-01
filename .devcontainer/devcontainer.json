@@ -21,7 +21,10 @@
     "containerEnv": {
         "MEGA_EMAIL": "${MEGA_EMAIL}",
         "MEGA_PASSWORD": "${MEGA_PASSWORD}",
-        "VNC_PASSWORD": "1234"
+        "VNC_PASSWORD": "1234",
+        "HUGGINGFACE_TOKEN": "${HUGGINGFACE_TOKEN}",
+        "PCLOUD_EMAIL": "${PCLOUD_EMAIL}",
+        "PCLOUD_PASSWORD": "${PCLOUD_PASSWORD}"
     },
     "initializeCommand": "docker-compose -f ${localWorkspaceFolder}/codespace/docker-compose.yml build",
 }

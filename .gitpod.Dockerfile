@@ -7,13 +7,20 @@ USER root
 # Set environment variables for MEGA CMD credentials (should be securely managed in Gitpod settings)
 ENV MEGA_EMAIL=""
 ENV MEGA_PASSWORD=""
+ENV HUGGINGFACE_TOKEN=""
+ENV PCLOUD_EMAIL=""
+ENV PCLOUD_PASSWORD=""
 
-# Install necessary packages and dependencies
+# Install necessary packages and dependencies, including libfuse2 and the universe repository
 RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -yq \
+    software-properties-common && \
+    add-apt-repository universe && \
+    apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq \
     libfuse2 fuse libatk-bridge2.0-0 libcups2 libdrm2 libgtk-3-0 \
     libgbm1 gnome-calculator geany libc-ares2 libmediainfo0v5 libzen0v5 \
-    nautilus dbus-x11 wget git zsh && \
+    nautilus dbus-x11 wget git zsh bpytop && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

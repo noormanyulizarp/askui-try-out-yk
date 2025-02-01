@@ -1,12 +1,14 @@
 #!/bin/bash
 
 VERSION="1.1.0"
-
 set -e
 trap cleanup EXIT
 
 BUILD_DIR="/tmp/pcloud-build"
 BUILD_FROM_SOURCE=${BUILD_FROM_SOURCE:-true}
+MOUNT_POINT="/workspace/pcloud"
+SHARED_DIR="/workspace/pcloud/Shares"
+LOCAL_COPY_DIR="/workspace/local_copy"
 
 cleanup() {
     [ -d "$BUILD_DIR" ] && rm -rf "$BUILD_DIR"
@@ -20,27 +22,49 @@ install_dependencies() {
     log_message "Installing required dependencies..."
     DEPS=(
         "cmake"
+        "libfuse-dev"
+        "libcurl4-openssl-dev"
+        "libsqlite3-dev"
+        "build-essential"
+        "git"
         "zlib1g-dev"
         "libboost-system-dev"
         "libboost-program-options-dev"
-        "libfuse-dev"
+        "libpthread-stubs0-dev"
         "libudev-dev"
-        "fuse"
-        "build-essential"
-        "git"
     )
     sudo apt-get update
     sudo apt-get install -y "${DEPS[@]}"
 }
 
-build_from_source() {
+clone_pcloudcc_repo() {
+    log_message "Cloning pCloud console client repository..."
+    git clone https://github.com/pcloudcom/console-client.git ~/console-client
+    cd ~/console-client/pCloudCC/
+}
+
+build_pcloudcc() {
     log_message "Building pCloud console client..."
-    mkdir -p "$BUILD_DIR" && cd "$BUILD_DIR"
-    git clone https://github.com/pcloudcom/console-client.git
-    cd console-client/pCloudCC/
-    make clean && make
-    sudo make install && sudo ldconfig
-    log_message "pCloud built successfully."
+
+    # Clean and build pclsync
+    cd lib/pclsync/
+    make clean
+    make fs
+
+    # Build mbedtls
+    cd ../mbedtls/
+    cmake .
+    make clean
+    make
+
+    # Go back to root and build the entire project
+    cd ../..
+    cmake .
+    make
+    sudo make install
+    sudo ldconfig
+
+    log_message "pCloud built and installed successfully."
 }
 
 configure_pcloud() {
@@ -64,22 +88,24 @@ configure_pcloud() {
 }
 
 mount_pcloud() {
-    local mount_point="/workspace/pcloud"
-    mkdir -p "$mount_point"
+    mkdir -p "$MOUNT_POINT"
     
-    if ! mountpoint -q "$mount_point"; then
+    if ! mountpoint -q "$MOUNT_POINT"; then
         log_message "Mounting pCloud..."
-        pcloudfs "$mount_point"
-        log_message "pCloud mounted at $mount_point"
+        pcloudfs "$MOUNT_POINT"
+        log_message "pCloud mounted at $MOUNT_POINT"
     else
         log_message "pCloud already mounted."
     fi
 }
 
 sync_shared_folders() {
-    log_message "Syncing shared folders..."
-    local shared_dir="/workspace/pcloud/Shares"
-    [ -d "$shared_dir" ] && pcloudcc -u "$PCLOUD_EMAIL" -p "$PCLOUD_PASSWORD" -c sync -s "$shared_dir" -d "/workspace/local_copy"
+    if [ -d "$SHARED_DIR" ]; then
+        log_message "Syncing shared folders..."
+        pcloudcc -u "$PCLOUD_EMAIL" -p "$PCLOUD_PASSWORD" -c sync -s "$SHARED_DIR" -d "$LOCAL_COPY_DIR"
+    else
+        log_message "Shared directory not found. Skipping sync."
+    fi
 }
 
 create_desktop_shortcut() {
@@ -89,7 +115,7 @@ create_desktop_shortcut() {
 [Desktop Entry]
 Name=pCloud
 Comment=Access your pCloud storage
-Exec=nautilus /workspace/pcloud
+Exec=nautilus $MOUNT_POINT
 Icon=folder
 Terminal=false
 Type=Application
@@ -100,7 +126,7 @@ EOF
 
 log_message "Starting pCloud setup v$VERSION..."
 install_dependencies
-[ "$BUILD_FROM_SOURCE" = true ] && build_from_source
+[ "$BUILD_FROM_SOURCE" = true ] && { clone_pcloudcc_repo; build_pcloudcc; }
 configure_pcloud
 mount_pcloud
 sync_shared_folders
